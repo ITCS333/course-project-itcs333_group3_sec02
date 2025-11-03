@@ -11,14 +11,16 @@
   3. Implement the TODOs below.
 */
 
-// --- Global Data Store ---
+
 // This will hold the assignments loaded from the JSON file.
 let assignments = [];
 
 // --- Element Selections ---
 // TODO: Select the assignment form ('#assignment-form').
+const assignmentForm = document.querySelector('#assignment-form');
 
 // TODO: Select the assignments table body ('#assignments-tbody').
+const assignmentsTableBody = document.querySelector('#assignments-tbody');
 
 // --- Functions ---
 
@@ -33,7 +35,38 @@ let assignments = [];
  * - A "Delete" button with class "delete-btn" and `data-id="${id}"`.
  */
 function createAssignmentRow(assignment) {
-  // ... your implementation here ...
+  const row = document.createElement('tr');
+  
+  
+  const titleCell = document.createElement('td');
+  titleCell.textContent = assignment.title;
+  
+  
+  const dueDateCell = document.createElement('td');
+  dueDateCell.textContent = assignment.dueDate;
+  
+ 
+  const actionsCell = document.createElement('td');
+  
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit';
+  editBtn.className = 'edit-btn';
+  editBtn.setAttribute('data-id', assignment.id);
+  
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.setAttribute('data-id', assignment.id);
+  
+  actionsCell.appendChild(editBtn);
+  actionsCell.appendChild(deleteBtn);
+  
+  // put everything together
+  row.appendChild(titleCell);
+  row.appendChild(dueDateCell);
+  row.appendChild(actionsCell);
+  
+  return row;
 }
 
 /**
@@ -45,7 +78,14 @@ function createAssignmentRow(assignment) {
  * append the resulting <tr> to `assignmentsTableBody`.
  */
 function renderTable() {
-  // ... your implementation here ...
+  
+  assignmentsTableBody.innerHTML = '';
+  
+  
+  for (let i = 0; i < assignments.length; i++) {
+    const row = createAssignmentRow(assignments[i]);
+    assignmentsTableBody.appendChild(row);
+  }
 }
 
 /**
@@ -60,7 +100,32 @@ function renderTable() {
  * 6. Reset the form.
  */
 function handleAddAssignment(event) {
-  // ... your implementation here ...
+  // stop the form from actually submitting
+  event.preventDefault();
+  
+  // grab the values from the form fields
+  const title = document.querySelector('#assignment-title').value;
+  const description = document.querySelector('#assignment-description').value;
+  const dueDate = document.querySelector('#assignment-due-date').value;
+  const files = document.querySelector('#assignment-files').value;
+  
+  // make a new assignment object with a unique id
+  const newAssignment = {
+    id: `asg_${Date.now()}`,
+    title: title,
+    description: description,
+    dueDate: dueDate,
+    files: files
+  };
+  
+  // add it to our assignments list
+  assignments.push(newAssignment);
+  
+  // update the table to show the new assignment
+  renderTable();
+  
+  // clear the form so it's ready for the next one
+  assignmentForm.reset();
 }
 
 /**
@@ -74,7 +139,19 @@ function handleAddAssignment(event) {
  * 4. Call `renderTable()` to refresh the list.
  */
 function handleTableClick(event) {
-  // ... your implementation here ...
+  
+  if (event.target.classList.contains('delete-btn')) {
+    // get the id from the button
+    const assignmentId = event.target.getAttribute('data-id');
+    
+    // filter out the assignment with this id from our list
+    assignments = assignments.filter(function(assignment) {
+      return assignment.id !== assignmentId;
+    });
+    
+    
+    renderTable();
+  }
 }
 
 /**
@@ -88,9 +165,22 @@ function handleTableClick(event) {
  * 5. Add the 'click' event listener to `assignmentsTableBody` (calls `handleTableClick`).
  */
 async function loadAndInitialize() {
-  // ... your implementation here ...
+  
+  const response = await fetch('assignments.json');
+  const data = await response.json();
+  
+  
+  assignments = data;
+  
+  
+  renderTable();
+  
+  
+  assignmentForm.addEventListener('submit', handleAddAssignment);
+  
+  
+  assignmentsTableBody.addEventListener('click', handleTableClick);
 }
 
-// --- Initial Page Load ---
-// Call the main async function to start the application.
+
 loadAndInitialize();
