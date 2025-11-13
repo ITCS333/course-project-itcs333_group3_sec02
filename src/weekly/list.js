@@ -1,3 +1,4 @@
+
 /*
   Requirement: Populate the "Weekly Course Breakdown" list page.
 
@@ -13,6 +14,7 @@
 
 // --- Element Selections ---
 // TODO: Select the section for the week list ('#week-list-section').
+const listSection = document.querySelector('#week-list-section');
 
 // --- Functions ---
 
@@ -24,7 +26,27 @@
  * (This is how the detail page will know which week to load).
  */
 function createWeekArticle(week) {
-  // ... your implementation here ...
+  const article = document.createElement('article');
+  
+  const h2 = document.createElement('h2');
+  h2.textContent = week.title;
+  
+  const p = document.createElement('p');
+  p.textContent = `Starts on: ${week.startDate}`;
+  
+  const descP = document.createElement('p');
+  descP.textContent = week.description;
+  
+  const a = document.createElement('a');
+  a.href = `details.html?id=${week.id}`;
+  a.textContent = 'View Details & Discussion';
+  
+  article.appendChild(h2);
+  article.appendChild(p);
+  article.appendChild(descP);
+  article.appendChild(a);
+  
+  return article;
 }
 
 /**
@@ -39,7 +61,15 @@ function createWeekArticle(week) {
  * - Append the returned <article> element to `listSection`.
  */
 async function loadWeeks() {
-  // ... your implementation here ...
+  const response = await fetch('weeks.json');
+  const weeks = await response.json();
+  
+  listSection.innerHTML = '';
+  
+  weeks.forEach(week => {
+    const article = createWeekArticle(week);
+    listSection.appendChild(article);
+  });
 }
 
 // --- Initial Page Load ---
