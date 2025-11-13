@@ -54,6 +54,14 @@ function createResourceArticle(resource) {
  */
 async function loadResources() {
   // ... your implementation here ...
+  const response =  await fetch('resources.json');
+  const resources = await response.json();
+  listSection.innerHTML = "";
+  resources.forEach(resource =>{
+    const article = createResourceArticle(resource);
+    listSection.appendChild(article);
+  });
+
 }
 
 // --- Initial Page Load ---
