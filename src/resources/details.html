@@ -20,7 +20,7 @@
 <body>
     <!-- TODO: Create a 'header' with a main heading ('h1'). You can use a dummy title like "Chapter 1 Notes". -->
      <header>
-        <h1>Chapter 1 Notes</h1>
+        <h1 id="resource-title">Chapter 1 Notes</h1>
      </header>
 
     <!-- TODO: Create the 'main' content area. -->
@@ -30,8 +30,8 @@
         <!-- TODO: Use an 'article' to display the main resource information. -->
          <article>
             <!-- TODO: Add a paragraph ('p') for the resource description (use dummy text). -->
-             <p>This resource has detailed notes on Chapter 1, covering all key concepts and examples.</p>
-             <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank">Access Resource Material</a>
+             <p id="resource-description">This resource has detailed notes on Chapter 1, covering all key concepts and examples.</p>
+             <a id="resource-link" href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank">Access Resource Material</a>
             <!-- TODO: Add an anchor tag ('a') that links to the actual resource URL (use a dummy link like "https://example.com").
                  - Text should be "Access Resource Material".
                  - Consider adding 'target="_blank"' to open it in a new tab. -->
@@ -46,7 +46,7 @@
 
             <!-- Subsection 2.1: Existing Comments -->
             <!-- TODO: Add a container (like a 'div') for the list of comments. -->
-             <div class="comment-list">
+             <div id="comment-list" class="comment-list">
                 <!-- TODO: Add 1-2 dummy comments to show the structure. -->
 
                 <!-- Example Comment 1: -->
@@ -70,7 +70,7 @@
 
             <!-- Subsection 2.2: Add a Comment Form -->
             <!-- TODO: Create a 'form' for users to post new comments. Action can be '#'. -->
-             <form action="#">
+             <form action="#" id="comment-form">
                 <!-- TODO: Use a 'fieldset' to group the controls. -->
                  <fieldset>
                     <legend>Leave a comment</legend>
@@ -94,5 +94,6 @@
 
     <!-- End of main. -->
      </main>
+     <script src="details.js" defer></script>
 </body>
 </html>
