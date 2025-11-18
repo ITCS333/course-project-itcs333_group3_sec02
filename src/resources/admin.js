@@ -17,8 +17,10 @@ let resources = [];
 
 // --- Element Selections ---
 // TODO: Select the resource form ('#resource-form').
+const resourceForm = document.querySelector('#resource-form');
 
 // TODO: Select the resources table body ('#resources-tbody').
+const resourcesTableBody = document.querySelector('#resources-tbody');
 
 // --- Functions ---
 
@@ -34,6 +36,37 @@ let resources = [];
  */
 function createResourceRow(resource) {
   // ... your implementation here ...
+  const row = document.createElement('tr');
+
+  const titleCell =document.createElement('td');
+  titleCell.textContent = resource.title;
+
+  const descriptionCell = document.createElement('td');
+  descriptionCell.textContent = resource.description;
+
+  const actionsCell = document.createElement('td');
+
+  const editBtn = document.createElement('button');
+  editBtn.textContent ='Edit';
+  editBtn.className = 'edit-btn';
+  editBtn.setAttribute('data-id', resource.id);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.setAttribute('data-id', resource.id);
+
+  //buttons appended to actions cell
+  actionsCell.appendChild(editBtn);
+  actionsCell.appendChild(deleteBtn);
+
+  //cells appended to row
+  row.appendChild(titleCell);
+  row.appendChild(descriptionCell);
+  row.appendChild(actionsCell);
+
+  return row;
+
 }
 
 /**
@@ -46,6 +79,12 @@ function createResourceRow(resource) {
  */
 function renderTable() {
   // ... your implementation here ...
+  resourcesTableBody.innerHTML = '';
+
+  for (let i=0; i<resources.length; i++){
+    const row = createResourceRow(resources[i]);
+    resourcesTableBody.appendChild(row);
+  }
 }
 
 /**
@@ -61,6 +100,21 @@ function renderTable() {
  */
 function handleAddResource(event) {
   // ... your implementation here ...
+  event.preventDefault();
+
+  const titleInput = document.querySelector('#resource-title');
+  const descriptionInput = document.querySelector('#resource-description');
+  const linkInput = document.querySelector('#resource-link');
+
+  const newResource ={
+    id: `res_${Date.now()}`,
+    title: titleInput,
+    description: descriptionInput,
+    link: linkInput
+  };
+  resources.push(newResource);
+  renderTable();
+  resourceForm.reset();
 }
 
 /**
@@ -75,6 +129,14 @@ function handleAddResource(event) {
  */
 function handleTableClick(event) {
   // ... your implementation here ...
+  if (event.target.classList.contains('delete-btn')){
+    const resourceId = event.target.getAttribute('data-id');
+    resources = resources.filter(function(resource){
+      return resource.id !== resourceId;
+    });
+
+    renderTable();
+  }
 }
 
 /**
@@ -89,6 +151,14 @@ function handleTableClick(event) {
  */
 async function loadAndInitialize() {
   // ... your implementation here ...
+  const response = await fetch('resources.json');
+  const data = await response.json();
+
+  resources =data;
+  renderTable();
+
+  resourceForm.addEventListener('submit', handleAddResource);
+  resourcesTableBody.addEventListener('click', handleTableClick);
 }
 
 // --- Initial Page Load ---

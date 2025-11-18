@@ -29,7 +29,6 @@ const resourceLink = document.getElementById('resource-link');
 const commentList = document.getElementById('comment-list');
 const commentForm = document.getElementById('comment-form');
 const newComment = document.getElementById('new-comment');
-
 // --- Functions ---
 
 /**
