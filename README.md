@@ -10,9 +10,9 @@
 | Task                  |             Student     |
 |-----------------------|-------------------------|
 | task1                 | Wejdan Ahmed Yahya      |
-| task2                 | Hiba                    |
-| task3                 | Hafsa Mukhtar Ahmad     |
-| task4                 | Fahreen Mehboob         |
+| task2: resources      | Hiba                    |
+| task3: weekly         | Hafsa Mukhtar Ahmad     |
+| task4: assignments    | Fahreen Mehboob         |
 
 
 ## A link to your live, hosted application on Replit.
