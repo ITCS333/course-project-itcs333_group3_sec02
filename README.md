@@ -3,11 +3,24 @@
 # ITCS### Course Page
 
 ## The names and student IDs of all team members.
+<<<<<<< HEAD
 Fahreen Mehboob 202205372
 
 Hiba Barkat Abbas Nakade 202201477
 
 
+=======
+- fahreen mehboob 202205372
+- wejdan ahmed yahya 202106744
+- Hafsa Mukhtar Ahmad 202200348
+>>>>>>> 11ddc291fa0ab7d73918b5d225d4fadb64c2d2b3
 ## A table indicating which student was responsible for which task.
+| Task                  |             Student     |
+|-----------------------|-------------------------|
+| task1                 | Wejdan Ahmed Yahya      |
+| task2: resources      | Hiba                    |
+| task3: weekly         | Hafsa Mukhtar Ahmad     |
+| task4: assignments    | Fahreen Mehboob         |
+
 
 ## A link to your live, hosted application on Replit.

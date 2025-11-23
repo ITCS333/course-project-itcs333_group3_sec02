@@ -46,7 +46,9 @@
 
 
 // TODO: Handle preflight OPTIONS request
-If 
+If ($_SERVER['REQUEST_METHOD'] === 'OPTIONS'){
+    
+}
 
 
 
