@@ -3,7 +3,10 @@
 # ITCS### Course Page
 
 ## The names and student IDs of all team members.
-fahreen mehboob 202205372
+Fahreen Mehboob 202205372
+
+Hiba Barkat Abbas Nakade 202201477
+
 
 ## A table indicating which student was responsible for which task.
 
