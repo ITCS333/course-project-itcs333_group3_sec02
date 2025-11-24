@@ -4,7 +4,6 @@
 
 ## The names and student IDs of all team members.
 <<<<<<< HEAD
-Fahreen Mehboob 202205372
 
 Hiba Barkat Abbas Nakade 202201477
 
