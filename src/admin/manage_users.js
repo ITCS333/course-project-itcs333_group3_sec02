@@ -226,28 +226,19 @@ function handleTableClick(event) {
  */
 function handleSearch(event) {
   // ... your implementation here ...
-  const target = event.target;
-  // Only handle buttons
-  if (target.tagName.toLowerCase() !== 'button') return;
-  const studentId = target.dataset.id;
-  if (target.classList.contains('delete-btn')) {
-    // Delete logic
-    students = students.filter((student) => student.id !== studentId);
+  const searchTerm = event.target.value.toLowerCase().trim();
+  // 2. If empty -> show all students
+  if (!searchTerm) {
     renderTable(students);
+    return;
   }
-  // Edit logic
-  if (target.classList.contains('edit-btn')) {
-    // Simple example: prompt for a new name
-    const student = students.find((s) => s.id === studentId);
-    if (!student) return;
-    const newName = prompt('Enter new name for this student:', student.name);
-    if (newName && newName.trim() !== '') {
-      student.name = newName.trim();
-      renderTable(students);
-    }
-  }
+  // 3. Filter students by name
+  const filtered = students.filter((student) =>
+    student.name.toLowerCase().includes(searchTerm)
+  );
+  // 4. Render the filtered list
+  renderTable(filtered);
 }
-
 /**
  * TODO: Implement the handleSort function.
  * This function will be called when any `th` in the `thead` is clicked.
