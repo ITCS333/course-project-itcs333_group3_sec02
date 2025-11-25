@@ -1,3 +1,4 @@
+
 <?php
 /**
  * Assignment Management API
@@ -18,7 +19,7 @@
  *   - created_at (TIMESTAMP)
  *   - updated_at (TIMESTAMP)
  * 
- * Table: comments
+ * Table: comments_assignment
  * Columns:
  *   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
  *   - assignment_id (VARCHAR(50), FOREIGN KEY)
@@ -389,7 +390,7 @@ function deleteAssignment($db, $assignmentId) {
     }
     
     // TODO: Delete associated comments first (due to foreign key constraint)
-    $deleteCommentsSql = "DELETE FROM comments WHERE assignment_id = :assignment_id";
+    $deleteCommentsSql = "DELETE FROM comments_assignment WHERE assignment_id = :assignment_id";
     $deleteCommentsStmt = $db->prepare($deleteCommentsSql);
     $deleteCommentsStmt->bindValue(':assignment_id', $assignmentId);
     $deleteCommentsStmt->execute();
@@ -402,7 +403,9 @@ function deleteAssignment($db, $assignmentId) {
     $stmt->bindValue(':id', $assignmentId);
     
     // TODO: Execute the statement
-    $result = $stmt->execute();    // TODO: Check if delete was successful
+    $result = $stmt->execute();
+    
+    // TODO: Check if delete was successful
     if($result) {
         sendResponse(array('success' => true, 'message' => 'Assignment deleted successfully'));
         return;
@@ -412,7 +415,6 @@ function deleteAssignment($db, $assignmentId) {
     sendResponse(array('success' => false, 'message' => 'Failed to delete assignment'), 500);
 }
 
-// ============================================================================
 // COMMENT CRUD FUNCTIONS
 // ============================================================================
 
@@ -428,24 +430,27 @@ function deleteAssignment($db, $assignmentId) {
  */
 function getCommentsByAssignment($db, $assignmentId) {
     // TODO: Validate that $assignmentId is provided and not empty
-    
+    if(empty($assignmentId)) {
+        sendResponse(array('success' => false, 'message' => 'Assignment ID is required'), 400);
+        return;
+    }
     
     // TODO: Prepare SQL query to select all comments for the assignment
-    
+    $sql = "SELECT * FROM comments_assignment WHERE assignment_id = :assignment_id ORDER BY created_at ASC";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind the :assignment_id parameter
-    
+    $stmt->bindValue(':assignment_id', $assignmentId);
     
     // TODO: Execute the statement
-    
+    $stmt->execute();
     
     // TODO: Fetch all results as associative array
-    
+    $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // TODO: Return success response with comments data
-    
+    sendResponse(array('success' => true, 'data' => $comments));
 }
-
 
 /**
  * Function: Create a new comment
@@ -461,33 +466,66 @@ function getCommentsByAssignment($db, $assignmentId) {
  */
 function createComment($db, $data) {
     // TODO: Validate required fields
-    
+    if(empty($data['assignment_id']) || empty($data['author']) || empty($data['text'])) {
+        sendResponse(array('success' => false, 'message' => 'Assignment ID, author, and text are required'), 400);
+        return;
+    }
     
     // TODO: Sanitize input data
-    
+    $assignment_id = sanitizeInput($data['assignment_id']);
+    $author = sanitizeInput($data['author']);
+    $text = sanitizeInput($data['text']);
     
     // TODO: Validate that text is not empty after trimming
-    
+    if(empty(trim($text))) {
+        sendResponse(array('success' => false, 'message' => 'Comment text cannot be empty'), 400);
+        return;
+    }
     
     // TODO: Verify that the assignment exists
+    $checkSql = "SELECT id FROM assignments WHERE id = :id";
+    $checkStmt = $db->prepare($checkSql);
+    $checkStmt->bindValue(':id', $assignment_id);
+    $checkStmt->execute();
     
+    if(!$checkStmt->fetch()) {
+        sendResponse(array('success' => false, 'message' => 'Assignment not found'), 404);
+        return;
+    }
     
     // TODO: Prepare INSERT query for comment
-    
+    $sql = "INSERT INTO comments_assignment (assignment_id, author, text, created_at) 
+            VALUES (:assignment_id, :author, :text, NOW())";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind all parameters
-    
+    $stmt->bindValue(':assignment_id', $assignment_id);
+    $stmt->bindValue(':author', $author);
+    $stmt->bindValue(':text', $text);
     
     // TODO: Execute the statement
-    
+    $result = $stmt->execute();
     
     // TODO: Get the ID of the inserted comment
-    
+    $commentId = $db->lastInsertId();
     
     // TODO: Return success response with created comment data
+    if($result) {
+        sendResponse(array(
+            'success' => true,
+            'message' => 'Comment created successfully',
+            'data' => array(
+                'id' => $commentId,
+                'assignment_id' => $assignment_id,
+                'author' => $author,
+                'text' => $text
+            )
+        ), 201);
+        return;
+    }
     
+    sendResponse(array('success' => false, 'message' => 'Failed to create comment'), 500);
 }
-
 
 /**
  * Function: Delete a comment
@@ -501,27 +539,41 @@ function createComment($db, $data) {
  */
 function deleteComment($db, $commentId) {
     // TODO: Validate that $commentId is provided and not empty
-    
+    if(empty($commentId)) {
+        sendResponse(array('success' => false, 'message' => 'Comment ID is required'), 400);
+        return;
+    }
     
     // TODO: Check if comment exists
+    $checkSql = "SELECT id FROM comments_assignment WHERE id = :id";
+    $checkStmt = $db->prepare($checkSql);
+    $checkStmt->bindValue(':id', $commentId);
+    $checkStmt->execute();
     
+    if(!$checkStmt->fetch()) {
+        sendResponse(array('success' => false, 'message' => 'Comment not found'), 404);
+        return;
+    }
     
     // TODO: Prepare DELETE query
-    
+    $sql = "DELETE FROM comments_assignment WHERE id = :id";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind the :id parameter
-    
+    $stmt->bindValue(':id', $commentId);
     
     // TODO: Execute the statement
-    
+    $result = $stmt->execute();
     
     // TODO: Check if delete was successful
-    
+    if($result) {
+        sendResponse(array('success' => true, 'message' => 'Comment deleted successfully'));
+        return;
+    }
     
     // TODO: If delete failed, return 500 error
-    
+    sendResponse(array('success' => false, 'message' => 'Failed to delete comment'), 500);
 }
-
 
 // ============================================================================
 // MAIN REQUEST ROUTER
@@ -529,76 +581,75 @@ function deleteComment($db, $commentId) {
 
 try {
     // TODO: Get the 'resource' query parameter to determine which resource to access
-    
+    $resource = isset($_GET['resource']) ? $_GET['resource'] : '';
     
     // TODO: Route based on HTTP method and resource type
-    
-    if ($method === 'GET') {
+    if($method === 'GET') {
         // TODO: Handle GET requests
-        
-        if ($resource === 'assignments') {
+        if($resource === 'assignments') {
             // TODO: Check if 'id' query parameter exists
-            
-        } elseif ($resource === 'comments') {
+            if(isset($_GET['id'])) {
+                getAssignmentById($db, $_GET['id']);
+            } else {
+                getAllAssignments($db);
+            }
+        } elseif($resource === 'comments') {
             // TODO: Check if 'assignment_id' query parameter exists
-            
+            if(isset($_GET['assignment_id'])) {
+                getCommentsByAssignment($db, $_GET['assignment_id']);
+            } else {
+                sendResponse(array('success' => false, 'message' => 'assignment_id parameter is required'), 400);
+            }
         } else {
             // TODO: Invalid resource, return 400 error
-            
+            sendResponse(array('success' => false, 'message' => 'Invalid resource'), 400);
         }
-        
-    } elseif ($method === 'POST') {
+    } elseif($method === 'POST') {
         // TODO: Handle POST requests (create operations)
-        
-        if ($resource === 'assignments') {
+        if($resource === 'assignments') {
             // TODO: Call createAssignment($db, $data)
-            
-        } elseif ($resource === 'comments') {
+            createAssignment($db, $data);
+        } elseif($resource === 'comments') {
             // TODO: Call createComment($db, $data)
-            
+            createComment($db, $data);
         } else {
             // TODO: Invalid resource, return 400 error
-            
+            sendResponse(array('success' => false, 'message' => 'Invalid resource'), 400);
         }
-        
-    } elseif ($method === 'PUT') {
+    } elseif($method === 'PUT') {
         // TODO: Handle PUT requests (update operations)
-        
-        if ($resource === 'assignments') {
+        if($resource === 'assignments') {
             // TODO: Call updateAssignment($db, $data)
-            
+            updateAssignment($db, $data);
         } else {
             // TODO: PUT not supported for other resources
-            
+            sendResponse(array('success' => false, 'message' => 'PUT method not supported for this resource'), 405);
         }
-        
-    } elseif ($method === 'DELETE') {
+    } elseif($method === 'DELETE') {
         // TODO: Handle DELETE requests
-        
-        if ($resource === 'assignments') {
+        if($resource === 'assignments') {
             // TODO: Get 'id' from query parameter or request body
-            
-        } elseif ($resource === 'comments') {
+            $id = isset($_GET['id']) ? $_GET['id'] : (isset($data['id']) ? $data['id'] : null);
+            deleteAssignment($db, $id);
+        } elseif($resource === 'comments') {
             // TODO: Get comment 'id' from query parameter
-            
+            $id = isset($_GET['id']) ? $_GET['id'] : null;
+            deleteComment($db, $id);
         } else {
             // TODO: Invalid resource, return 400 error
-            
+            sendResponse(array('success' => false, 'message' => 'Invalid resource'), 400);
         }
-        
     } else {
         // TODO: Method not supported
-        
+        sendResponse(array('success' => false, 'message' => 'HTTP method not supported'), 405);
     }
-    
-} catch (PDOException $e) {
+} catch(PDOException $e) {
     // TODO: Handle database errors
-    
-} catch (Exception $e) {
+    sendResponse(array('success' => false, 'message' => 'Database error: ' . $e->getMessage()), 500);
+} catch(Exception $e) {
     // TODO: Handle general errors
-    
+    sendResponse(array('success' => false, 'message' => 'Error: ' . $e->getMessage()), 500);
 }
-
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -612,18 +663,19 @@ try {
  */
 function sendResponse($data, $statusCode = 200) {
     // TODO: Set HTTP response code
-    
+    http_response_code($statusCode);
     
     // TODO: Ensure data is an array
-    
+    if(!is_array($data)) {
+        $data = array('data' => $data);
+    }
     
     // TODO: Echo JSON encoded data
-    
+    echo json_encode($data);
     
     // TODO: Exit to prevent further execution
-    
+    exit();
 }
-
 
 /**
  * Helper function to sanitize string input
@@ -633,18 +685,17 @@ function sendResponse($data, $statusCode = 200) {
  */
 function sanitizeInput($data) {
     // TODO: Trim whitespace from beginning and end
-    
+    $data = trim($data);
     
     // TODO: Remove HTML and PHP tags
-    
+    $data = strip_tags($data);
     
     // TODO: Convert special characters to HTML entities
-    
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     
     // TODO: Return the sanitized data
-    
+    return $data;
 }
-
 
 /**
  * Helper function to validate date format (YYYY-MM-DD)
@@ -654,12 +705,11 @@ function sanitizeInput($data) {
  */
 function validateDate($date) {
     // TODO: Use DateTime::createFromFormat to validate
-    
+    $d = DateTime::createFromFormat('Y-m-d', $date);
     
     // TODO: Return true if valid, false otherwise
-    
+    return $d && $d->format('Y-m-d') === $date;
 }
-
 
 /**
  * Helper function to validate allowed values (for sort fields, order, etc.)
@@ -670,10 +720,6 @@ function validateDate($date) {
  */
 function validateAllowedValue($value, $allowedValues) {
     // TODO: Check if $value exists in $allowedValues array
-    
-    
-    // TODO: Return the result
-    
+    return in_array($value, $allowedValues);
 }
-
 ?>
