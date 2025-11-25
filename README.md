@@ -18,7 +18,7 @@ Hiba Barkat Abbas Nakade 202201477
 | Task                  |             Student     |
 |-----------------------|-------------------------|
 | task1                 | Wejdan Ahmed Yahya      |
-| task2: resources      | Hiba                    |
+| task2: resources      | Hiba Barkat Abbas Nakade|
 | task3: weekly         | Hafsa Mukhtar Ahmad     |
 | task4: assignments    | Fahreen Mehboob         |
 
