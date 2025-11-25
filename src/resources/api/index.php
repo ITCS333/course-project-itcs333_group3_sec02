@@ -55,33 +55,49 @@
 // Allow cross-origin requests (CORS) if needed
 // Allow specific HTTP methods (GET, POST, PUT, DELETE, OPTIONS)
 // Allow specific headers (Content-Type, Authorization)
-
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 // TODO: Handle preflight OPTIONS request
 // If the request method is OPTIONS, return 200 status and exit
-
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS'){
+    http_response_code(200);
+    exit;
+}
 
 // TODO: Include the database connection class
 // Assume the Database class has a method getConnection() that returns a PDO instance
 // Example: require_once '../config/Database.php';
-
+require_once '../config/Database.php';
 
 // TODO: Get the PDO database connection
 // Example: $database = new Database();
 // Example: $db = $database->getConnection();
-
+$database = new Database();
+$db = $database->getConnection();
 
 // TODO: Get the HTTP request method
 // Use $_SERVER['REQUEST_METHOD']
-
+$method = $_SERVER['REQUEST_METHOD'];
 
 // TODO: Get the request body for POST and PUT requests
 // Use file_get_contents('php://input') to get raw POST data
 // Decode JSON data using json_decode() with associative array parameter
+$input = [];
+if ($method === 'POST' || $method === 'PUT') {
+    $raw_input = file_get_contents('php://input');
+    $input = json_decode($raw_input, true);
+}
 
 
 // TODO: Parse query parameters
 // Get 'action', 'id', 'resource_id', 'comment_id' from $_GET
+$action = $_GET['action'] ?? null;
+$id = $_GET['id'] ?? null;
+$resourceId = $_GET['resource_id'] ?? null;
+$commentId = $_GET['comment_id'] ?? null;
 
 
 // ============================================================================
@@ -104,32 +120,56 @@
 function getAllResources($db) {
     // TODO: Initialize the base SQL query
     // SELECT id, title, description, link, created_at FROM resources
+    $sql = "SELECT id, title, description, link, created_at FROM resources";
+    $params = [];
     
     // TODO: Check if search parameter exists
     // If yes, add WHERE clause using LIKE to search title and description
     // Use OR to search both fields
+    $search = $_GET['search'] ?? null;
+    if ($search) {
+        $sql .= "WHERE title LIKE :search OR description LIKE :search";
+        $params[':search'] = "%" . $search . "%";
+    }
     
     // TODO: Check if sort parameter exists and validate it
     // Only allow: title, created_at
     // Default to created_at if not provided or invalid
+    $sort = $_GET['sort'] ?? 'created_at';
+    $allowed_sort = ['title', 'created_at'];
+    if (!in_array($sort, $allowed_sort)) {
+        $sort = 'created_at';
+    }
     
     // TODO: Check if order parameter exists and validate it
     // Only allow: asc, desc
     // Default to desc if not provided or invalid
-    
+    $order = $_GET['order'] ?? 'desc';
+    $allowed_order = ['asc', 'desc'];
+    if (!in_array($order, $allowed_order)){
+        $order = 'desc';
+    }    
     // TODO: Add ORDER BY clause to query
+    $sql .= " ORDER BY $sort $order";
     
     // TODO: Prepare the SQL query using PDO
+    $stmt = $db->prepare($sql);
     
     // TODO: If search parameter was used, bind the search parameter
     // Use % wildcards for LIKE search
+    if ($search) {
+        $stmt->bindValue(':search' , "%" . $search . "%");
+    }
     
     // TODO: Execute the query
+    $stmt->execute();
     
     // TODO: Fetch all results as an associative array
+    $resources = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // TODO: Return JSON response with success status and data
     // Use the helper function sendResponse()
+    sendResponse(array('success' => true, 'data' => $resources));
 }
 
 
@@ -270,6 +310,10 @@ function updateResource($db, $data) {
 function deleteResource($db, $resourceId) {
     // TODO: Validate that resource ID is provided and is numeric
     // If not, return error response with 400 status
+    if (!is_numeric($resourceId)){
+        sendResponse(array('success' => false, 'message' => 'Invalid resource ID'), 400);
+        return;
+    }
     
     // TODO: Check if resource exists
     // Prepare and execute a SELECT query
@@ -301,6 +345,7 @@ function deleteResource($db, $resourceId) {
         // Use $db->rollBack()
         
         // TODO: Return error response with 500 status
+        sendResponse(array('success' => false, 'message' => 'Failed to delete resource'), 500);
     }
 }
 
@@ -323,6 +368,7 @@ function deleteResource($db, $resourceId) {
 function getCommentsByResourceId($db, $resourceId) {
     // TODO: Validate that resource_id is provided and is numeric
     // If not, return error response with 400 status
+    if (!)
     
     // TODO: Prepare SQL query to select comments for the resource
     // SELECT id, resource_id, author, text, created_at 
