@@ -60,7 +60,7 @@ function createAssignmentArticle(assignment) {
  * - Append the returned <article> element to `listSection`.
  */
 async function loadAssignments() {
-  const response = await fetch('assignments.json');
+  const response = await fetch('api/assignments.json');
   const assignments = await response.json();
   
   listSection.innerHTML = '';

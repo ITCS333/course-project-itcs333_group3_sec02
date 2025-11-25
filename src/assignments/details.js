@@ -24,6 +24,19 @@ let currentComments = [];
 
 // --- Element Selections ---
 // TODO: Select all the elements you added IDs for in step 2.
+const assignmentTitle = document.getElementById('assignment-title');
+
+const assignmentDueDate = document.getElementById('assignment-due-date');
+
+const assignmentDescription = document.getElementById('assignment-description');
+
+const assignmentFilesList = document.getElementById('assignment-files-list');
+
+const commentList = document.getElementById('comment-list');
+
+const commentForm = document.getElementById('comment-form');
+
+const newCommentText = document.getElementById('new-comment-text');
 
 // --- Functions ---
 
@@ -36,6 +49,8 @@ let currentComments = [];
  */
 function getAssignmentIdFromURL() {
   // ... your implementation here ...
+  const params = new URLSearchParams(window.location.search);
+  return params.get('id');
 }
 
 /**
@@ -50,6 +65,19 @@ function getAssignmentIdFromURL() {
  */
 function renderAssignmentDetails(assignment) {
   // ... your implementation here ...
+  assignmentTitle.textContent = assignment.title;
+  assignmentDueDate.textContent = 'Due: ' + assignment.dueDate;
+  assignmentDescription.textContent = assignment.description;
+  
+  assignmentFilesList.innerHTML = '';
+  assignment.files.forEach(file => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = '#';
+    a.textContent = file;
+    li.appendChild(a);
+    assignmentFilesList.appendChild(li);
+  });
 }
 
 /**
@@ -59,6 +87,19 @@ function renderAssignmentDetails(assignment) {
  */
 function createCommentArticle(comment) {
   // ... your implementation here ...
+  const article = document.createElement('article');
+  article.className = 'comment';
+  
+  const p = document.createElement('p');
+  p.textContent = comment.text;
+  
+  const footer = document.createElement('footer');
+  footer.textContent = 'Posted by: ' + comment.author;
+  
+  article.appendChild(p);
+  article.appendChild(footer);
+  
+  return article;
 }
 
 /**
@@ -71,6 +112,11 @@ function createCommentArticle(comment) {
  */
 function renderComments() {
   // ... your implementation here ...
+  commentList.innerHTML = '';
+  currentComments.forEach(comment => {
+    const article = createCommentArticle(comment);
+    commentList.appendChild(article);
+  });
 }
 
 /**
@@ -88,6 +134,21 @@ function renderComments() {
  */
 function handleAddComment(event) {
   // ... your implementation here ...
+  event.preventDefault();
+  
+  const commentText = newCommentText.value.trim();
+  if (commentText === '') {
+    return;
+  }
+  
+  const newComment = {
+    author: 'Student',
+    text: commentText
+  };
+  
+  currentComments.push(newComment);
+  renderComments();
+  newCommentText.value = '';
 }
 
 /**
@@ -108,6 +169,39 @@ function handleAddComment(event) {
  */
 async function initializePage() {
   // ... your implementation here ...
+  currentAssignmentId = getAssignmentIdFromURL();
+  
+  if (!currentAssignmentId) {
+    alert('No assignment ID found in URL');
+    return;
+  }
+  
+  try {
+    const [assignmentsResponse, commentsResponse] = await Promise.all([
+      fetch('api/assignments.json'),
+      fetch('api/comments.json')
+    ]);
+    
+    const assignments = await assignmentsResponse.json();
+    const comments = await commentsResponse.json();
+    
+    const assignment = assignments.find(a => a.id === currentAssignmentId);
+    
+    if (!assignment) {
+      alert('Assignment not found');
+      return;
+    }
+    
+    currentComments = comments[currentAssignmentId] || [];
+    
+    renderAssignmentDetails(assignment);
+    renderComments();
+    commentForm.addEventListener('submit', handleAddComment);
+    
+  } catch (error) {
+    console.error('Error loading data:', error);
+    alert('Failed to load assignment details');
+  }
 }
 
 // --- Initial Page Load ---
