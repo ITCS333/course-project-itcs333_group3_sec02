@@ -61,10 +61,8 @@ $data = json_decode($rawData, true);
 if (!is_array($data)) {
     $data = [];
 }
-
 // TODO: Parse query parameters for filtering and searching
-$query = $_GET;
-
+$queryParams = $_GET;
 /**
  * Function: Get all students or search for specific students
  * Method: GET
