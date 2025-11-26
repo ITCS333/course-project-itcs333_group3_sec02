@@ -285,24 +285,30 @@ function deleteStudent($db, $studentId) {
     if (empty($studentId)) {
         sendResponse(["success" => false, "message" => "student_id required"], 400);
     }
+
     $sid = sanitizeInput($studentId);
+
     // TODO: Check if student exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-     $check = $db->prepare("SELECT id FROM students WHERE student_id = :sid LIMIT 1");
+    $check = $db->prepare("SELECT id FROM students WHERE student_id = :sid LIMIT 1");
     $check->bindParam(":sid", $sid);
     $check->execute();
+
     if (!$check->fetch(PDO::FETCH_ASSOC)) {
         sendResponse(["success" => false, "message" => "Student not found"], 404);
     }
+
     // TODO: Prepare DELETE query
     $sql = "DELETE FROM students WHERE student_id = :sid";
     $stmt = $db->prepare($sql);
-    $stmt->bindParam(":sid", $sid);
+
     // TODO: Bind the student_id parameter
-     $deleteStmt->bindParam(':student_id', $studentId, PDO::PARAM_STR);
+    $stmt->bindParam(":sid", $sid, PDO::PARAM_STR);
+
     // TODO: Execute the query
-     $success = $deleteStmt->execute();
+    $success = $stmt->execute();
+
     // TODO: Check if delete was successful
     // If yes, return success response
     // If no, return error response with 500 status
@@ -318,6 +324,7 @@ function deleteStudent($db, $studentId) {
         ], 500);
     }
 }
+
 /**
  * Function: Change password
  * Method: POST with action=change_password
