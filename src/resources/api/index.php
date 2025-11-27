@@ -344,26 +344,51 @@ function updateResource($db, $data) {
         $params[':description'] = sanitizeInput($data['description']);
     }
     
-    
+    if (isset($data['link'])) {
+        $setClauses[] = "link = :link";
+        $params[':link'] = sanitizeInput($data['link']);
+    }
+
     // TODO: If no fields to update, return error response with 400 status
+    if (empty($setClauses)) {
+        sendResponse(array('success' =>false, 'message' => 'No fields to update'), 400);
+        return;
+    }
     
     // TODO: If link is being updated, validate URL format
     // Use filter_var with FILTER_VALIDATE_URL
     // If invalid, return error response with 400 status
+    if (isset($data['link'])) {
+        if (!filter_var($data['link'], FILTER_VALIDATE_URL)) {
+            sendResponse(array('success' => false, 'message' => 'Invalid URL format'), 400);
+            return;
+        }
+    }
     
     // TODO: Build the complete UPDATE SQL query
     // UPDATE resources SET field1 = ?, field2 = ? WHERE id = ?
+    $sql = "UPDATE resources SET " . implode(",", $setClauses) . " WHERE id = :id";
     
     // TODO: Prepare the query
+    $stmt = $db-> prepare($sql);
     
     // TODO: Bind parameters dynamically
     // Bind all update values, then bind the resource ID at the end
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
     
     // TODO: Execute the query
+    $success = $stmt->execute();
     
     // TODO: Check if update was successful
     // If yes, return success response with 200 status
     // If no, return error response with 500 status
+    if ($success) {
+        sendResponse(array('success' => true, 'message' => 'Resource updated successfully'), 200);
+    } else {
+        sendResponse(array('success' => false, 'message' => 'Failed to update resource'), 500);
+    }
 }
 
 
@@ -383,7 +408,7 @@ function updateResource($db, $data) {
 function deleteResource($db, $resourceId) {
     // TODO: Validate that resource ID is provided and is numeric
     // If not, return error response with 400 status
-    if (!is_numeric($resourceId)){
+    if (empty($resourceId) || !is_numeric($resourceId)) {
         sendResponse(array('success' => false, 'message' => 'Invalid resource ID'), 400);
         return;
     }
@@ -391,31 +416,52 @@ function deleteResource($db, $resourceId) {
     // TODO: Check if resource exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
+    $checkSql = "SELECT id FROM resources WHERE id = ?";
+    $checkStmt = $db->prepare($checkSql);
+    $checkStmt->bindValue(':id', $resourceId);
+    $checkStmt->execute();
+
+    if (!$checkStmt->fetch()){
+        sendResponse(array('success' =>false, 'message' => 'Resource not found'), 404);
+        return;
+    }
     
     // TODO: Begin a transaction (for data integrity)
     // Use $db->beginTransaction()
+    $db->beginTransaction();
     
     try {
         // TODO: First, delete all associated comments
         // Prepare DELETE query for comments table
         // DELETE FROM comments WHERE resource_id = ?
-        
+        $deleteCommentsSql = "DELETE FROM comments WHERE resource_id = :resource_id";
+        $deleteCommentsStmt = $db->prepare($deleteCommentsSql);
+
         // TODO: Bind resource_id and execute
+        $deleteCommentsStmt->bindValue(':resource_id', $resourceId);
+        $deleteCommentsStmt->execute();
         
         // TODO: Then, delete the resource
         // Prepare DELETE query for resources table
         // DELETE FROM resources WHERE id = ?
+        $deleteResourceSql = "DELETE FROM resources WHERE id = :resource_id";
+        $deleteResourceStmt = $db->prepare($deleteResourceSql);
         
         // TODO: Bind resource_id and execute
+        $deleteResourceStmt->bindValue(':resource_id', $resourceId);
+        $deleteResourceStmt->execute();
         
         // TODO: Commit the transaction
         // Use $db->commit()
+        $db->commit();
         
         // TODO: Return success response with 200 status
+        sendResponse(array('success' => true, 'message' =>'Resource deleted successfully'), 200);
         
     } catch (Exception $e) {
         // TODO: Rollback the transaction on error
         // Use $db->rollBack()
+        $db->rollBack();
         
         // TODO: Return error response with 500 status
         sendResponse(array('success' => false, 'message' => 'Failed to delete resource'), 500);
@@ -441,22 +487,34 @@ function deleteResource($db, $resourceId) {
 function getCommentsByResourceId($db, $resourceId) {
     // TODO: Validate that resource_id is provided and is numeric
     // If not, return error response with 400 status
-    if (!)
+    if (empty($resourceId) || !is_numeric($resourceId)) {
+        sendResponse(array('success' => false, 'message' => 'Invalid resource ID'), 400);
+        return;
+    }
     
     // TODO: Prepare SQL query to select comments for the resource
     // SELECT id, resource_id, author, text, created_at 
     // FROM comments 
     // WHERE resource_id = ? 
     // ORDER BY created_at ASC
+    $sql = "SELECT id, resource_id, author, text, created_at
+            FROM comments
+            WHERE resource_id = :resource_id
+            ORDER BY created_at ASC";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind the resource_id parameter
+    $stmt->bindValue(':resource_id', $resourceId);
     
     // TODO: Execute the query
+    $stmt->execute();
     
     // TODO: Fetch all results as an associative array
+    $comments = $stmt->fetchall(PDO::FETCH_ASSOC);
     
     // TODO: Return success response with comments data
     // Even if no comments exist, return empty array (not an error)
+    sendResponse(array('success' => true, 'data' => $comments));
 }
 
 
@@ -478,29 +536,65 @@ function createComment($db, $data) {
     // TODO: Validate required fields
     // Check if resource_id, author, and text are provided and not empty
     // If any required field is missing, return error response with 400 status
+    if (empty($data['resource_id']) || empty($data['author']) || empty($data['text'])) {
+        sendResponse(array('success' => false, ' message'=> 'resource_id, author and text are required'), 400);
+        return;
+    }
     
     // TODO: Validate that resource_id is numeric
     // If not, return error response with 400 status
+    if (!is_numeric($data['resource_id'])) {
+        sendResponse(array('success' => false, 'message' => 'Invalid resource ID'), 400);
+        return;
+    }
     
     // TODO: Check if the resource exists
     // Prepare and execute SELECT query on resources table
     // If resource not found, return error response with 404 status
+    $resourceId = $data['resource_id'];
+    $checkSql = "SELECT id FROM resources WHERE id = :resource_id";
+    $checkStmt = $db->prepare($checkSql);
+    $checkStmt->bindValue(':resource_id', $resourceId);
+    $checkStmt->execute();
+
+    if (!$checkStmt->fetch()) {
+        sendResponse(array('success' => false, 'message' => 'Resource not found'), 404);
+        return;
+    }
     
     // TODO: Sanitize input data
     // Trim whitespace from author and text
+    $author = sanitizeInput($data['author']);
+    $text = sanitizeInput($data['text']);
     
     // TODO: Prepare INSERT query
     // INSERT INTO comments (resource_id, author, text) VALUES (?, ?, ?)
+    $sql = "INSERT INTO comments (resource_id, author, text) VALUES (:resource_id, :author, :text)";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind parameters
     // Bind resource_id, author, and text
+    $stmt->bindValue(':resource_id', $resourceId);
+    $stmt->bindValue(':author', $author);
+    $stmt->bindValue(':text', $text)
     
     // TODO: Execute the query
+    $stmt->execute();
     
     // TODO: Check if insert was successful
     // If yes, get the last inserted ID using $db->lastInsertId()
     // Return success response with 201 status and the new comment ID
     // If no, return error response with 500 status
+    if ($stmt) {
+        $newID = $db->lastInsertId();
+        sendResponse(array(
+            'success' => true,
+            'message' => 'Comment created successfully',
+            'id' => $newID),
+        201);
+    } else{
+        sendResponse(array('success' => false, 'message'=> 'Failed to create comment'), 500);
+    }
 }
 
 
