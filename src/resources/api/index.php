@@ -612,21 +612,43 @@ function createComment($db, $data) {
 function deleteComment($db, $commentId) {
     // TODO: Validate that comment_id is provided and is numeric
     // If not, return error response with 400 status
+    if (empty($commentId) || !is_numeric($commentId)) {
+        sendResponse(array('success' => false, 'message' => 'Invalid comment ID'), 400);
+        return;
+    }
     
     // TODO: Check if comment exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
+    $checkSql = " SELECT id FROM comment WHERE id = :comment_id";
+    $checkStmt = $db->prepare($checkSql);
+    $checkStmt->bindValue(':comment_id', $commentId);
+    $checkStmt->execute();
+
+    if (!$checkStmt->fetch()) {
+        sendResponse(array('success' => false, 'message' => 'Comment not found'), 404);
+        return;
+    }
     
     // TODO: Prepare DELETE query
     // DELETE FROM comments WHERE id = ?
+    $sql = "DELETE FROM comments WHERE id = :comment_id";
+    $stmt = $db->prepare($sql);
     
     // TODO: Bind the comment_id parameter
+    $stmt->bindValue(':comment_id', $commentId);
     
     // TODO: Execute the query
+     $stmt->execute();
     
     // TODO: Check if delete was successful
     // If yes, return success response with 200 status
     // If no, return error response with 500 status
+    if ($stmt) {
+        sendResponse(array('success' => true, 'message' => 'Comment deleted successfully'), 200);
+    } else {
+        sendResponse(array('success' => false, 'message' => 'Failed to delete comment'), 500);
+    }
 }
 
 
@@ -644,13 +666,26 @@ try {
         // TODO: Check if action === 'comments'
         // Get resource_id from query parameters
         // Call getCommentsByResourceId()
+        if ($action === 'comments') {
+            if($resourceId != null) {
+                getCommentsByResourceId($db, $resourceId);
+            } else {
+                sendResponse(array('success' => false, 'message' => 'resource_id parameter is required'), 400);
+            }
+        }
         
         // If id parameter exists, get single resource
         // TODO: Check if 'id' parameter exists in $_GET
         // Call getResourceById()
+        elseif ($id != null) {
+            getResourceById($db, $id);
+        }
         
         // Otherwise, get all resources
         // TODO: Call getAllResources()
+        else {
+            getAllResources($db);
+        }
         
     } elseif ($method === 'POST') {
         // TODO: Check the action parameter to determine which function to call
@@ -658,13 +693,20 @@ try {
         // If action is 'comment', create a new comment
         // TODO: Check if action === 'comment'
         // Call createComment()
+        if ($action === 'comment') {
+            createComment($db, $input);
+        }
         
         // Otherwise, create a new resource
         // TODO: Call createResource()
+        else {
+            createResource($db, $input);
+        }
         
     } elseif ($method === 'PUT') {
         // TODO: Update a resource
         // Call updateResource()
+        updateResource($db, $input);
         
     } elseif ($method === 'DELETE') {
         // TODO: Check the action parameter to determine which function to call
@@ -673,15 +715,30 @@ try {
         // TODO: Check if action === 'delete_comment'
         // Get comment_id from query parameters or request body
         // Call deleteComment()
+        if ($action === 'delete_comment') {
+            if ($commentId != null) {
+                deleteComment($db, $commentId);
+            } else {
+                sendResponse(array('success' => false, 'message' => 'comment_id parameter is required'), 400);
+            }
+        }
         
         // Otherwise, delete a resource
         // TODO: Get resource id from query parameter or request body
         // Call deleteResource()
+        else {
+            if ($id != null){
+                deleteResource($db, $id);
+            } else {
+                sendResponse(array('success' => false, 'message' => 'Resource_id parameter is required'), 400);
+            }
+        }
         
     } else {
         // TODO: Return error for unsupported methods
         // Set HTTP status to 405 (Method Not Allowed)
         // Return JSON error message using sendResponse()
+        sendResponse(array('success' => false, 'message' => 'Method Not Allowed'), 405);
     }
     
 } catch (PDOException $e) {
@@ -689,11 +746,15 @@ try {
     // Log the error message (optional, use error_log())
     // Return generic error response with 500 status
     // Do NOT expose detailed error messages to the client in production
+    error_log("Database error: " . $e->getMessage());
+    sendResponse(array('success' => false, 'message' => 'Database error occurred'), 500);
     
 } catch (Exception $e) {
     // TODO: Handle general errors
     // Log the error message (optional)
     // Return error response with 500 status
+    error_log("General error: " . $e->getMessage());
+    sendResponse(array('success' => false, 'message' => 'An error has occurred'), 500);
 }
 
 
@@ -709,12 +770,17 @@ try {
  */
 function sendResponse($data, $statusCode = 200) {
     // TODO: Set HTTP response code using http_response_code()
+    http_response_code($statusCode);
     
     // TODO: Ensure data is an array
     // If not, wrap it in an array
+    if (!is_array($data)) {
+        $data = array('data' => $data);
+    }
     
     // TODO: Echo JSON encoded data
     // Use JSON_PRETTY_PRINT for readability (optional)
+    echo json_encode($data, JSON_PRETTY_PRINT);
     
     // TODO: Exit to prevent further execution
     exit;
@@ -730,6 +796,7 @@ function sendResponse($data, $statusCode = 200) {
 function validateUrl($url) {
     // TODO: Use filter_var with FILTER_VALIDATE_URL
     // Return true if valid, false otherwise
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
 }
 
 
@@ -741,13 +808,17 @@ function validateUrl($url) {
  */
 function sanitizeInput($data) {
     // TODO: Trim whitespace using trim()
+    $data = trim($data);
     
     // TODO: Strip HTML tags using strip_tags()
+    $data = strip_tags($data);
     
     // TODO: Convert special characters using htmlspecialchars()
     // Use ENT_QUOTES to escape both double and single quotes
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     
     // TODO: Return sanitized data
+    return $data;
 }
 
 
@@ -760,13 +831,20 @@ function sanitizeInput($data) {
  */
 function validateRequiredFields($data, $requiredFields) {
     // TODO: Initialize empty array for missing fields
+    $missing = [];
     
     // TODO: Loop through required fields
     // Check if each field exists in data and is not empty
     // If missing or empty, add to missing fields array
+    foreach ($requiredFields as $field) {
+        if (!isset($data[$field]) || empty($data[$field])) {
+            $missing[] = $field;
+        }
+    }
     
     // TODO: Return result array
     // ['valid' => (count($missing) === 0), 'missing' => $missing]
+    return array('valid' => (count($missing) === 0), 'missing' => $missing);
 }
 
 ?>
