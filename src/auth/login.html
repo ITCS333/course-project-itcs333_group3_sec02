@@ -33,7 +33,7 @@
 <h1>Welcome Back!</h1>
             <!-- The form element will wrap all the inputs. -->
             <!-- TODO: Create a 'form' element. The 'action' can be '#' for now. -->
-<form action="#" method="post">
+<form action="#" method="post" id="login-form">
                 <!-- TODO: Use a 'fieldset' to group all the related controls for the login form. -->
                 <fieldset>
                     <!-- TODO: Add a 'legend' to caption the fieldset. e.g., "Secure Login". This improves accessibility. -->
@@ -76,12 +76,14 @@
                    <button type="submit" id="login">Log In</button>
                 <!-- End of the fieldset. -->
 </fieldset>
+                  <div id="message-container"></div>
             <!-- End of the form element. -->
  </form>
         <!-- End of the login section. -->
  </section>
     <!-- End of the main content area. -->
 </main>
+  <script src="login.js" defer></script>
 </body>
 </html>
 
