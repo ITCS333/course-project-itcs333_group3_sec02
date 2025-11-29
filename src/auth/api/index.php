@@ -93,51 +93,51 @@ try {
     // Use a WHERE clause to filter by email
     // IMPORTANT: Use a placeholder (? or :email) for the email value
     // This prevents SQL injection attacks
-$sql = "SELECT id, name, email, password FROM users WHERE email = :email LIMIT 1";
+    $sql = "SELECT id, name, email, password FROM users WHERE email = :email LIMIT 1";
     // --- Prepare the Statement ---
     // TODO: Prepare the SQL statement using the PDO prepare method
     // Store the result in a variable
     // Prepared statements protect against SQL injection
-  $stmt = $pdo->prepare($sql);
+    $stmt = $pdo->prepare($sql);
     // --- Execute the Query ---
     // TODO: Execute the prepared statement with the email parameter
     // Bind the email value to the placeholder
-$stmt->bindParam(':email', $email, PDO::PARAM_STR);
+    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
     $stmt->execute();
     // --- Fetch User Data ---
     // TODO: Fetch the user record from the database
     // Use the fetch method with PDO::FETCH_ASSOC
     // This returns an associative array of the user data, or false if no user found
- $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     // --- Verify User Exists and Password Matches ---
     // TODO: Check if a user was found
     // The fetch method returns false if no record matches
- if ($user && isset($user['password'])) {
-    // TODO: If user exists, verify the password
-    // Use password_verify() to compare the submitted password with the hashed password from database
-    // This function returns true if they match, false otherwise
-    //
-    // NOTE: This assumes passwords are stored as hashes using password_hash()
-    // Never store passwords in plain text!
- $passwordMatches = password_verify($password, $user['password']);
+    if ($user && isset($user['password'])) {
+        // TODO: If user exists, verify the password
+        // Use password_verify() to compare the submitted password with the hashed password from database
+        // This function returns true if they match, false otherwise
+        //
+        // NOTE: This assumes passwords are stored as hashes using password_hash()
+        // Never store passwords in plain text!
+        $passwordMatches = password_verify($password, $user['password']);
+        // --- Handle Successful Authentication ---
+        // TODO: If password verification succeeds:
         if ($passwordMatches) {
-    // --- Handle Successful Authentication ---
-    // TODO: If password verification succeeds:
-        // TODO: Store user information in session variables
-        // Store: user_id, user_name, user_email, logged_in
-        // DO NOT store the password in the session!
- $_SESSION['user_id']    = $user['id'];
+            // TODO: Store user information in session variables
+            // Store: user_id, user_name, user_email, logged_in
+            // DO NOT store the password in the session!
+            $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_name']  = $user['name'];
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['logged_in']  = true;
-        // TODO: Prepare a success response array
-        // Include:
-        // - 'success' => true
-        // - 'message' => 'Login successful'
-        // - 'user' => array with safe user details (id, name, email)
-        //
-        // IMPORTANT: Do NOT include the password in the response
-  $response = [
+            // TODO: Prepare a success response array
+            // Include:
+            // - 'success' => true
+            // - 'message' => 'Login successful'
+            // - 'user' => array with safe user details (id, name, email)
+            //
+            // IMPORTANT: Do NOT include the password in the response
+            $response = [
                 'success' => true,
                 'message' => 'Login successful',
                 'user'    => [
@@ -146,42 +146,45 @@ $stmt->bindParam(':email', $email, PDO::PARAM_STR);
                     'email' => $user['email']
                 ]
             ];
-        // TODO: Encode the response array as JSON and echo it
-echo json_encode($response);
-        // TODO: Exit the script to prevent further execution
-    exit;
+            // TODO: Encode the response array as JSON and echo it
+            echo json_encode($response);
+            // TODO: Exit the script to prevent further execution
+            exit;
+        }
+    }
     // --- Handle Failed Authentication ---
     // TODO: If user doesn't exist OR password verification fails:
-        // TODO: Prepare an error response array
-        // Include:
-        // - 'success' => false
-        // - 'message' => 'Invalid email or password'
-        //
-        // SECURITY NOTE: Don't specify whether email or password was wrong
-        // This prevents attackers from enumerating valid email addresses
-$errorResponse = [
+    // TODO: Prepare an error response array
+    // Include:
+    // - 'success' => false
+    // - 'message' => 'Invalid email or password'
+    //
+    // SECURITY NOTE: Don't specify whether email or password was wrong
+    // This prevents attackers from enumerating valid email addresses
+    $errorResponse = [
         'success' => false,
         'message' => 'Invalid email or password'
     ];
-        // TODO: Encode the error response as JSON and echo it
-         echo json_encode($errorResponse);
-        // TODO: Exit the script
-exit;
-// TODO: Catch PDO exceptions in the catch block
-// Catch PDOException type
-} catch (PDOException $e) {
+    // TODO: Encode the error response as JSON and echo it
+    echo json_encode($errorResponse);
+    // TODO: Exit the script
+    exit;
+} 
+    // TODO: Catch PDO exceptions in the catch block
+    // Catch PDOException type
+catch (PDOException $e) {
     // TODO: Log the error for debugging
     // Use error_log() to write the error message to the server error log
-    error_log('Database error in login.php: ' . $e->getMessage());
+    error_log('Database error in index.php: ' . $e->getMessage());
     // TODO: Return a generic error message to the client
     // DON'T expose database details to the user for security reasons
     // Return a JSON response with success false and a generic message
-echo json_encode([
+    echo json_encode([
         'success' => false,
         'message' => 'An error occurred while processing your request.'
     ]);
     // TODO: Exit the script
-    exit; }
+    exit;
+}
 // --- End of Script ---
-
 ?>
