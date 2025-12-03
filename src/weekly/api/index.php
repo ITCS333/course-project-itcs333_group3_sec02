@@ -452,18 +452,27 @@ function deleteWeek($db, $weekId) {
 function getCommentsByWeek($db, $weekId) {
     // TODO: Validate that week_id is provided
     // If not, return error response with 400 status
-    
+    if (!$weekId) {
+        sendResponse(400, null, "week_id is required");
+    }
+
     // TODO: Prepare SQL query to select comments for the week
     // SELECT id, week_id, author, text, created_at FROM comments WHERE week_id = ? ORDER BY created_at ASC
-    
+    $sql = "SELECT id, week_id, author, text, created_at FROM comments WHERE week_id = ? ORDER BY created_at ASC";
+
     // TODO: Bind the week_id parameter
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$weekId]);
+
     
     // TODO: Execute the query
     
     // TODO: Fetch all results as an associative array
+    $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // TODO: Return JSON response with success status and data
     // Even if no comments exist, return an empty array
+    sendResponse(200, $comments);
 }
 
 
@@ -481,28 +490,58 @@ function createComment($db, $data) {
     // TODO: Validate required fields
     // Check if week_id, author, and text are provided
     // If any field is missing, return error response with 400 status
+    if (empty($data['week_id']) || empty($data['author']) || empty($data['text'])) {
+        sendResponse(400, null, "Missing required fields: week_id, author, or text");
+    }
     
     // TODO: Sanitize input data
     // Trim whitespace from all fields
+    $weekId = trim($data['week_id']);
+    $author = trim($data['author']);
+    $text   = trim($data['text']);
     
     // TODO: Validate that text is not empty after trimming
     // If empty, return error response with 400 status
+    if ($text === '') {
+        sendResponse(400, null, "Comment text should not be empty");
+    }
     
     // TODO: Check if the week exists
     // Prepare and execute a SELECT query on weeks table
     // If week not found, return error response with 404 status
+    $stmt = $db->prepare("SELECT week_id FROM weeks WHERE week_id = ?");
+    $stmt->execute([$weekId]);
+    if (!$stmt->fetch()) {
+        sendResponse(404, null, "Week not found");
+    }
     
     // TODO: Prepare INSERT query
     // INSERT INTO comments (week_id, author, text) VALUES (?, ?, ?)
-    
+    $sql = "INSERT INTO comments (week_id, author, text) VALUES (?, ?, ?)";
+
     // TODO: Bind parameters
+    $stmt = $db->prepare($sql);
     
     // TODO: Execute the query
+    $success = $stmt->execute([$weekId, $author, $text]);
     
     // TODO: Check if insert was successful
     // If yes, get the last insert ID and return success response with 201 status
     // Include the new comment data in the response
     // If no, return error response with 500 status
+    if ($success) {
+        $commentId = $db->lastInsertId();
+        $responseData = [
+            "id"        => $commentId,
+            "week_id"   => $weekId,
+            "author"    => $author,
+            "text"      => $text,
+            "created_at"=> date('Y-m-d H:i:s') // assuming default timestamp behavior
+        ];
+        sendResponse(201, $responseData, "Comment created successfully");
+    } else {
+        sendResponse(500, null, "Failed to create comment");
+    }
 }
 
 
@@ -517,21 +556,37 @@ function createComment($db, $data) {
 function deleteComment($db, $commentId) {
     // TODO: Validate that id is provided
     // If not, return error response with 400 status
+    if (!$commentId) {
+        sendResponse(400, null, "comment ID is required");
+    }
     
     // TODO: Check if comment exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
+    $stmt = $db->prepare("SELECT id FROM comments WHERE id = ?");
+    $stmt->execute([$commentId]);
+    if (!$stmt->fetch()) {
+        sendResponse(404, null, "Comment not found");
+    }
     
     // TODO: Prepare DELETE query
     // DELETE FROM comments WHERE id = ?
+    $sql = "DELETE FROM comments WHERE id = ?";
     
     // TODO: Bind the id parameter
+    $stmt = $db->prepare($sql);
     
     // TODO: Execute the query
+    $success = $stmt->execute([$commentId]);
     
     // TODO: Check if delete was successful
     // If yes, return success response
     // If no, return error response with 500 status
+    if ($success) {
+        sendResponse(200, null, "Comment deleted successfully");
+    } else {
+        sendResponse(500, null, "Failed to delete comment");
+    }
 }
 
 
@@ -543,6 +598,7 @@ try {
     // TODO: Determine the resource type from query parameters
     // Get 'resource' parameter (?resource=weeks or ?resource=comments)
     // If not provided, default to 'weeks'
+    $resource = $_GET['resource'] ?? 'weeks';
     
     
     // Route based on resource type and HTTP method
@@ -554,20 +610,30 @@ try {
             // TODO: Check if week_id is provided in query parameters
             // If yes, call getWeekById()
             // If no, call getAllWeeks() to get all weeks (with optional search/sort)
-            
+            $weekId = $_GET['week_id'] ?? null;
+            if ($weekId) {
+                getWeekById($db, $weekId);
+            } else {
+                getAllWeeks($db);
+            }
         } elseif ($method === 'POST') {
             // TODO: Call createWeek() with the decoded request body
+            createWeek($db, $input);
             
         } elseif ($method === 'PUT') {
             // TODO: Call updateWeek() with the decoded request body
+            updateWeek($db, $input);
             
         } elseif ($method === 'DELETE') {
             // TODO: Get week_id from query parameter or request body
             // Call deleteWeek()
+            $weekId = $_GET['week_id'] ?? $input['week_id'] ?? null;
+            deleteWeek($db, $weekId);
             
         } else {
             // TODO: Return error for unsupported methods
             // Set HTTP status to 405 (Method Not Allowed)
+            sendResponse(405, null, "Method not allowed for weeks");
         }
     }
     
@@ -577,17 +643,23 @@ try {
         if ($method === 'GET') {
             // TODO: Get week_id from query parameters
             // Call getCommentsByWeek()
-            
+            $weekId = $_GET['week_id'] ?? null;
+            getCommentsByWeek($db, $weekId);
+
         } elseif ($method === 'POST') {
             // TODO: Call createComment() with the decoded request body
-            
+            createComment($db, $input);
+
         } elseif ($method === 'DELETE') {
             // TODO: Get comment id from query parameter or request body
             // Call deleteComment()
+            $commentId = $_GET['id'] ?? $input['id'] ?? null;
+            deleteComment($db, $commentId);
             
         } else {
             // TODO: Return error for unsupported methods
             // Set HTTP status to 405 (Method Not Allowed)
+            sendResponse(405, null, "Method not allowed for comments");
         }
     }
     
@@ -596,21 +668,26 @@ try {
         // TODO: Return error for invalid resource
         // Set HTTP status to 400 (Bad Request)
         // Return JSON error message: "Invalid resource. Use 'weeks' or 'comments'"
+        sendResponse(400, null, "Invalid resource. Use 'weeks' or 'comments'");
     }
     
 } catch (PDOException $e) {
     // TODO: Handle database errors
     // Log the error message (optional, for debugging)
     // error_log($e->getMessage());
+    error_log($e->getMessage()); 
     
     // TODO: Return generic error response with 500 status
     // Do NOT expose database error details to the client
     // Return message: "Database error occurred"
+    sendResponse(500, null, "Database error occured");
     
 } catch (Exception $e) {
     // TODO: Handle general errors
     // Log the error message (optional)
     // Return error response with 500 status
+     error_log($e->getMessage());
+     sendResponse(500, null, "An unexpected error occurred");
 }
 
 
@@ -627,11 +704,14 @@ try {
 function sendResponse($data, $statusCode = 200) {
     // TODO: Set HTTP response code
     // Use http_response_code($statusCode)
+    http_response_code($statusCode);
     
     // TODO: Echo JSON encoded data
     // Use json_encode($data)
+    echo json_encode($data);
     
     // TODO: Exit to prevent further execution
+    exit;
 }
 
 
@@ -644,8 +724,10 @@ function sendResponse($data, $statusCode = 200) {
 function sendError($message, $statusCode = 400) {
     // TODO: Create error response array
     // Structure: ['success' => false, 'error' => $message]
+    $errorResponse = ['success' => false, 'error'   => $message];
     
     // TODO: Call sendResponse() with the error array and status code
+    sendResponse($errorResponse, $statusCode);
 }
 
 
@@ -660,6 +742,9 @@ function validateDate($date) {
     // Format: 'Y-m-d'
     // Check that the created date matches the input string
     // Return true if valid, false otherwise
+    $d = DateTime::createFromFormat('Y-m-d', $date);
+    return $d && $d->format('Y-m-d') === $date;
+
 }
 
 
@@ -671,12 +756,13 @@ function validateDate($date) {
  */
 function sanitizeInput($data) {
     // TODO: Trim whitespace
-    
+    $data = trim($data);
     // TODO: Strip HTML tags using strip_tags()
-    
+    $data = strip_tags($data);
     // TODO: Convert special characters using htmlspecialchars()
-    
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     // TODO: Return sanitized data
+    return $data;
 }
 
 
@@ -691,6 +777,7 @@ function isValidSortField($field, $allowedFields) {
     // TODO: Check if $field exists in $allowedFields array
     // Use in_array()
     // Return true if valid, false otherwise
+    return in_array($field, $allowedFields);
 }
 
 ?>
