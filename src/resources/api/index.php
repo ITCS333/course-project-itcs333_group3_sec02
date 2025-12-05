@@ -620,7 +620,7 @@ function deleteComment($db, $commentId) {
     // TODO: Check if comment exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $checkSql = " SELECT id FROM comment WHERE id = :comment_id";
+    $checkSql = " SELECT id FROM comments WHERE id = :comment_id";
     $checkStmt = $db->prepare($checkSql);
     $checkStmt->bindValue(':comment_id', $commentId);
     $checkStmt->execute();
