@@ -25,6 +25,7 @@ const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 // TODO: Select the message container element by its ID.
 const messageContainer = document.getElementById('message-container');
+
 // --- Functions ---
 
 /**
@@ -39,11 +40,11 @@ const messageContainer = document.getElementById('message-container');
  * (this will allow for CSS styling of 'success' and 'error' states).
  */
 function displayMessage(message, type) {
-  // ... your implementation here ...
   if (!messageContainer) return;
   messageContainer.textContent = message;
   messageContainer.className = type;
 }
+
 /**
  * TODO: Implement the isValidEmail function.
  * This function takes one argument:
@@ -57,7 +58,6 @@ function displayMessage(message, type) {
  * A simple regex for this purpose is: /\S+@\S+\.\S+/
  */
 function isValidEmail(email) {
-  // ... your implementation here ...
   const emailPattern = /\S+@\S+\.\S+/;
   return emailPattern.test(email);
 }
@@ -73,7 +73,6 @@ function isValidEmail(email) {
  * 3. Return `false` if the password is not valid.
  */
 function isValidPassword(password) {
-  // ... your implementation here ...
   return password.length >= 8;
 }
 
@@ -92,23 +91,54 @@ function isValidPassword(password) {
  * - (Optional) Clear the email and password input fields.
  */
 function handleLogin(event) {
-  // ... your implementation here ...
-  event.preventDefault();
+  event.preventDefault(); // Prevent default form submission
+
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
+
+  // Validate email
   if (!isValidEmail(email)) {
-    displayMessage('Invalid email format.', 'error');
+    displayMessage("Invalid email format.", "error");
     return;
   }
+
+  // Validate password
   if (!isValidPassword(password)) {
-    displayMessage('Password must be at least 8 characters.', 'error');
+    displayMessage("Password must be at least 8 characters.", "error");
     return;
   }
-  // If both are valid
-  displayMessage('Login successful!', 'success');
-  // clear fields
-  emailInput.value = '';
-  passwordInput.value = '';
+
+  // If valid locally, send to backend
+  displayMessage("Processing login...", "success");
+
+  fetch("login.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        displayMessage("Login successful!", "success");
+
+        // clear fields (optional)
+        emailInput.value = "";
+        passwordInput.value = "";
+
+        // Optional redirect logic
+        if (data.user && data.user.is_admin === 1) {
+          window.location.href = "../admin/dashboard.html";
+        } else {
+          window.location.href = "../student/dashboard.html";
+        }
+      } else {
+        displayMessage(data.message || "Login failed.", "error");
+      }
+    })
+    .catch(error => {
+      console.error("Login error:", error);
+      displayMessage("An error occurred. Please try again later.", "error");
+    });
 }
 
 /**
@@ -120,11 +150,11 @@ function handleLogin(event) {
  * 3. The event listener should call the `handleLogin` function.
  */
 function setupLoginForm() {
-  // ... your implementation here ...
   if (!loginForm) return;
-  loginForm.addEventListener('submit', handleLogin);
+  loginForm.addEventListener("submit", handleLogin);
 }
 
 // --- Initial Page Load ---
 // Call the main setup function to attach the event listener.
 setupLoginForm();
+
