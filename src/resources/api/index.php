@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS'){
 // TODO: Include the database connection class
 // Assume the Database class has a method getConnection() that returns a PDO instance
 // Example: require_once '../config/Database.php';
-require_once '../config/Database.php';
+require_once '../../config/Database.php';
 
 // TODO: Get the PDO database connection
 // Example: $database = new Database();
@@ -128,7 +128,7 @@ function getAllResources($db) {
     // Use OR to search both fields
     $search = $_GET['search'] ?? null;
     if ($search) {
-        $sql .= "WHERE title LIKE :search OR description LIKE :search";
+        $sql .= " WHERE title LIKE :search OR description LIKE :search";
         $params[':search'] = "%" . $search . "%";
     }
     
@@ -158,7 +158,7 @@ function getAllResources($db) {
     // TODO: If search parameter was used, bind the search parameter
     // Use % wildcards for LIKE search
     if ($search) {
-        $stmt->bindValue(':search' , "%" . $search . "%");
+        $stmt->bindValue(':search' , $params[':search'], PDO::PARAM_STR);
     }
     
     // TODO: Execute the query
@@ -272,13 +272,13 @@ function createResource($db, $data) {
     $stmt->bindValue(3, $link);
     
     // TODO: Execute the query
-    $stmt->execute();
+    $success = $stmt->execute();
     
     // TODO: Check if insert was successful
     // If yes, get the last inserted ID using $db->lastInsertId()
     // Return success response with 201 status and the new resource ID
     // If no, return error response with 500 status
-    if ($stmt) {
+    if ($success && $stmt->rowCount() > 0) {
         $newID = $db->lastInsertId();
         sendResponse(array(
             'success' => true, 
@@ -367,7 +367,7 @@ function updateResource($db, $data) {
     
     // TODO: Build the complete UPDATE SQL query
     // UPDATE resources SET field1 = ?, field2 = ? WHERE id = ?
-    $sql = "UPDATE resources SET " . implode(",", $setClauses) . " WHERE id = ?";
+    $sql = "UPDATE resources SET " . implode(",", $setClauses) . " WHERE id = :id";
     
     // TODO: Prepare the query
     $stmt = $db-> prepare($sql);
@@ -384,7 +384,7 @@ function updateResource($db, $data) {
     // TODO: Check if update was successful
     // If yes, return success response with 200 status
     // If no, return error response with 500 status
-    if ($success) {
+    if ($success && $stmt->rowCount() > 0) {
         sendResponse(array('success' => true, 'message' => 'Resource updated successfully'), 200);
     } else {
         sendResponse(array('success' => false, 'message' => 'Failed to update resource'), 500);
@@ -434,11 +434,11 @@ function deleteResource($db, $resourceId) {
         // TODO: First, delete all associated comments
         // Prepare DELETE query for comments table
         // DELETE FROM comments WHERE resource_id = ?
-        $deleteCommentsSql = "DELETE FROM comments WHERE resource_id = ?";
+        $deleteCommentsSql = "DELETE FROM comments_resource WHERE resource_id = ?";
         $deleteCommentsStmt = $db->prepare($deleteCommentsSql);
 
         // TODO: Bind resource_id and execute
-        $deleteCommentsStmt->bindValue(1, $resourceId);
+        $deleteCommentsStmt->bindValue(1, $resourceId, PDO::PARAM_INT);
         $deleteCommentsStmt->execute();
         
         // TODO: Then, delete the resource
@@ -504,13 +504,13 @@ function getCommentsByResourceId($db, $resourceId) {
     $stmt = $db->prepare($sql);
     
     // TODO: Bind the resource_id parameter
-    $stmt->bindValue(1, $resourceId);
+    $stmt->bindValue(1, $resourceId, PDO::PARAM_INT);
     
     // TODO: Execute the query
     $stmt->execute();
     
     // TODO: Fetch all results as an associative array
-    $comments = $stmt->fetchall(PDO::FETCH_ASSOC);
+    $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // TODO: Return success response with comments data
     // Even if no comments exist, return empty array (not an error)
@@ -554,7 +554,7 @@ function createComment($db, $data) {
     $resourceId = $data['resource_id'];
     $checkSql = "SELECT id FROM resources WHERE id = :resource_id";
     $checkStmt = $db->prepare($checkSql);
-    $checkStmt->bindValue(':resource_id', $resourceId);
+    $checkStmt->bindValue(':resource_id', $resourceId, PDO::PARAM_INT);
     $checkStmt->execute();
 
     if (!$checkStmt->fetch()) {
@@ -574,18 +574,18 @@ function createComment($db, $data) {
     
     // TODO: Bind parameters
     // Bind resource_id, author, and text
-    $stmt->bindValue(1, $resourceId);
+    $stmt->bindValue(1, $resourceId, PDO::PARAM_INT);
     $stmt->bindValue(2, $author);
     $stmt->bindValue(3, $text);
     
     // TODO: Execute the query
-    $stmt->execute();
+    $success = $stmt->execute();
     
     // TODO: Check if insert was successful
     // If yes, get the last inserted ID using $db->lastInsertId()
     // Return success response with 201 status and the new comment ID
     // If no, return error response with 500 status
-    if ($stmt) {
+    if ($success && $stmt->rowCount() > 0) {
         $newID = $db->lastInsertId();
         sendResponse(array(
             'success' => true,
@@ -639,12 +639,12 @@ function deleteComment($db, $commentId) {
     $stmt->bindValue(1, $commentId, PDO::PARAM_INT);
     
     // TODO: Execute the query
-     $stmt->execute();
+    $success = $stmt->execute();
     
     // TODO: Check if delete was successful
     // If yes, return success response with 200 status
     // If no, return error response with 500 status
-    if ($stmt) {
+    if ($success && $stmt->rowCount() > 0) {
         sendResponse(array('success' => true, 'message' => 'Comment deleted successfully'), 200);
     } else {
         sendResponse(array('success' => false, 'message' => 'Failed to delete comment'), 500);
@@ -667,8 +667,8 @@ try {
         // Get resource_id from query parameters
         // Call getCommentsByResourceId()
         if ($action === 'comments') {
-            if($resourceId != null) {
-                getCommentsByResourceId($db, $_GET['resource_id']);
+            if($resource_id != null) {
+                getCommentsByResourceId($db, $resource_id);
             } else {
                 sendResponse(array('success' => false, 'message' => 'resource_id parameter is required'), 400);
             }
@@ -716,8 +716,8 @@ try {
         // Get comment_id from query parameters or request body
         // Call deleteComment()
         if ($action === 'delete_comment') {
-            if ($commentId != null) {
-                deleteComment($db, $commentId);
+            if ($comment_id != null) {
+                deleteComment($db, $comment_id);
             } else {
                 sendResponse(array('success' => false, 'message' => 'comment_id parameter is required'), 400);
             }
