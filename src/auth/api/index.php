@@ -109,7 +109,7 @@ try {
     // Use a WHERE clause to filter by email
     // IMPORTANT: Use a placeholder (? or :email) for the email value
     // This prevents SQL injection attacks
-    $sql = "SELECT id, name, email, password FROM users WHERE email = :email LIMIT 1";
+    $sql = "SELECT id, name, email, password, is_admin FROM users WHERE email = :email LIMIT 1";
     // --- Prepare the Statement ---
     // TODO: Prepare the SQL statement using the PDO prepare method
     // Store the result in a variable
