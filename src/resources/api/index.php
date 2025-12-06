@@ -194,11 +194,11 @@ function getResourceById($db, $resourceId) {
     
     // TODO: Prepare SQL query to select resource by id
     // SELECT id, title, description, link, created_at FROM resources WHERE id = ?
-    $sql = "SELECT id, title, description, link, created_at FROM resources WHERE id = ?";
+    $sql = "SELECT id, title, description, link, created_at FROM resources WHERE id = :id";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind the resource_id parameter
-    $stmt->bindValue(1, $resourceId, PDO::PARAM_INT);
+    $stmt->bindValue(':id', $resourceId, PDO::PARAM_INT);
     
     // TODO: Execute the query
     $stmt->execute();
@@ -262,7 +262,7 @@ function createResource($db, $data) {
     
     // TODO: Prepare INSERT query
     // INSERT INTO resources (title, description, link) VALUES (?, ?, ?)
-    $sql = "INSERT INTO resources (title, description, link) VALUES (?, ?, ?)";
+    $sql = "INSERT INTO resources (title, description, link) VALUES (:title, :description, :link)";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind parameters
@@ -317,7 +317,7 @@ function updateResource($db, $data) {
     // Prepare and execute a SELECT query to find the resource by id
     // If not found, return error response with 404 status
     $resourceId = $data['id'];
-    $checkSql = "SELECT id FROM resources WHERE id = ?";
+    $checkSql = "SELECT id FROM resources WHERE id = :id";
     $checkStmt = $db->prepare($checkSql);
     $checkStmt->bindValue(':id', $resourceId);
     $checkStmt->execute();
@@ -416,7 +416,7 @@ function deleteResource($db, $resourceId) {
     // TODO: Check if resource exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $checkSql = "SELECT id FROM resources WHERE id = ?";
+    $checkSql = "SELECT id FROM resources WHERE id = :id";
     $checkStmt = $db->prepare($checkSql);
     $checkStmt->bindValue(':id', $resourceId);
     $checkStmt->execute();
@@ -444,11 +444,11 @@ function deleteResource($db, $resourceId) {
         // TODO: Then, delete the resource
         // Prepare DELETE query for resources table
         // DELETE FROM resources WHERE id = ?
-        $deleteResourceSql = "DELETE FROM resources WHERE id = :resource_id";
+        $deleteResourceSql = "DELETE FROM resources WHERE id = :id";
         $deleteResourceStmt = $db->prepare($deleteResourceSql);
         
         // TODO: Bind resource_id and execute
-        $deleteResourceStmt->bindValue(':resource_id', $resourceId);
+        $deleteResourceStmt->bindValue(':id', $resourceId, PDO::PARAM_INT);
         $deleteResourceStmt->execute();
         
         // TODO: Commit the transaction
@@ -569,7 +569,7 @@ function createComment($db, $data) {
     
     // TODO: Prepare INSERT query
     // INSERT INTO comments (resource_id, author, text) VALUES (?, ?, ?)
-    $sql = "INSERT INTO comments (resource_id, author, text) VALUES (:resource_id, :author, :text)";
+    $sql = "INSERT INTO comments_resource (resource_id, author, text) VALUES (:resource_id, :author, :text)";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind parameters
@@ -620,9 +620,9 @@ function deleteComment($db, $commentId) {
     // TODO: Check if comment exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $checkSql = " SELECT id FROM comments WHERE id = :comment_id";
+    $checkSql = " SELECT id FROM comments_resource WHERE id = :comment_id";
     $checkStmt = $db->prepare($checkSql);
-    $checkStmt->bindValue(':comment_id', $commentId);
+    $checkStmt->bindValue(':comment_id', $commentId, PDO::PARAM_INT);
     $checkStmt->execute();
 
     if (!$checkStmt->fetch()) {
@@ -632,11 +632,11 @@ function deleteComment($db, $commentId) {
     
     // TODO: Prepare DELETE query
     // DELETE FROM comments WHERE id = ?
-    $sql = "DELETE FROM comments WHERE id = :comment_id";
+    $sql = "DELETE FROM comments_resource WHERE id = :comment_id";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind the comment_id parameter
-    $stmt->bindValue(':comment_id', $commentId);
+    $stmt->bindValue(':comment_id', $commentId, PDO::PARAM_INT);
     
     // TODO: Execute the query
      $stmt->execute();
