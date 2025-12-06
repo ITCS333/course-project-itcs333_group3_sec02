@@ -108,9 +108,9 @@ function handleAddResource(event) {
 
   const newResource ={
     id: `res_${Date.now()}`,
-    title: titleInput,
-    description: descriptionInput,
-    link: linkInput
+    title: titleInput,// add .value
+    description: descriptionInput, // add .value
+    link: linkInput // add .value
   };
   resources.push(newResource);
   renderTable();
@@ -151,7 +151,7 @@ function handleTableClick(event) {
  */
 async function loadAndInitialize() {
   // ... your implementation here ...
-  const response = await fetch('resources.json');
+  const response = await fetch('resources.json'); // replace with : const response = await fetch('../../api/resources.json');
   const data = await response.json();
 
   resources =data;
