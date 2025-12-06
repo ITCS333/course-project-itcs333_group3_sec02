@@ -14,6 +14,7 @@
 // --- Element Selections ---
 // TODO: Select the section for the resource list ('#resource-list-section').
 const listSection = document.querySelector('#resource-list-section');
+const Resource_URL = "../api/index.php?resource=resources";
 
 // --- Functions ---
 
@@ -58,7 +59,7 @@ function createResourceArticle(resource) {
  */
 async function loadResources() {
   // ... your implementation here ...
-  const response = await fetch('resources.json');
+  const response = await fetch(Resource_URL);
   const resources = await response.json();
   
   listSection.innerHTML = '';

@@ -34,6 +34,9 @@ const commentList = document.getElementById('comment-list');
 const commentForm = document.getElementById('comment-form');
 
 const newComment = document.getElementById('new-comment');
+
+const Resource_URL = "../api/index.php?resource=resources";
+const Comments_URL = "../api/index.php?resource=comments";
 // --- Functions ---
 
 /**
@@ -76,7 +79,6 @@ function renderResourceDetails(resource) {
 function createCommentArticle(comment) {
   // ... your implementation here ...
   const article = document.createElement('article');
-  article.className = 'comment';
 
   const p = document.createElement('p');
   p.textContent = comment.text;
@@ -86,6 +88,7 @@ function createCommentArticle(comment) {
 
   article.appendChild(p);
   article.appendChild(commentFooter);
+  article.classList.add('comment');
   return article;
 }
 
@@ -127,15 +130,30 @@ function handleAddComment(event) {
   if (commentText === ''){
     return;
   }
+  const reID = getResourceIdFromURL();
 
   const newCommentObj = {
+    id: "", 
+    resource_id: reID,
     author: 'Student',
     text: commentText
   };
-  
-  currentComments.push(newCommentObj);
-  renderComments();
-  newComment.value = '';
+  fetch(Comments_URL, "&action=comment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(newCommentObj)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      newCommentObj.id = result.id;
+      currentComments.push(newCommentObj);
+      renderComments();
+      commentForm.reset();
+    } else {
+      console.error("Error adding comment:", result.message);
+    }
+  });
 }
 
 /**
@@ -163,20 +181,32 @@ async function initializePage() {
     return;
   }
   try{
-    const [resourcesResponse, commentsResponse] = await Promise.all;([
-      fetch('resources.json'),
-      fetch('resource-comments.json')
-    ]);
-    const resourcesData = await resourcesResponse.json();
-    const commentsData = await commentsResponse.json();
-    const resource = resourcesData.find(res => res.id === currentResourceId);
-    currentComments = commentsData[currentResourceId] || [];
-    if (resource){
-      renderResourceDetails(resource);
+    const resourcesResponse = await fetch(Resource_URL + "&id=" + currentResourceId);
+    
+    if (!resourcesResponse.ok){
+      throw new Error("Failed to fetch resources.");
+    }
+
+    const resources = await resourcesResponse.json();
+    if (!resources.success){
+      throw new Error("Failed to fetch resources data.");
+    }
+
+    const commentsResponse = await fetch(Comments_URL + "&action=comments&resource_id=" + currentResourceId)
+    if (!commentsResponse.ok){
+      throw new Error("Failed to fetch comments.");
+    }
+    const comment = await commentsResponse.json();
+    const findResource = resources.data;
+
+    console.log('Resource:', findResource);
+    console.log('Comments: ', comment.data);
+    if (findResource){
+      currentComments = comment.data;
+      renderResourceDetails(findResource);
       renderComments();
       commentForm.addEventListener('submit', handleAddComment);
-    }
-    else{
+    } else{
       resourceTitle.textContent = "Resource not found.";
     }
   }

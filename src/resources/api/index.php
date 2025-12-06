@@ -96,8 +96,8 @@ if ($method === 'POST' || $method === 'PUT') {
 // Get 'action', 'id', 'resource_id', 'comment_id' from $_GET
 $action = $_GET['action'] ?? null;
 $id = $_GET['id'] ?? null;
-$resourceId = $_GET['resource_id'] ?? null;
-$commentId = $_GET['comment_id'] ?? null;
+$resource_id = $_GET['resource_id'] ?? null;
+$comment_id = $_GET['comment_id'] ?? null;
 
 
 // ============================================================================
@@ -245,9 +245,9 @@ function createResource($db, $data) {
     // Trim whitespace from all fields
     // Validate URL format for link using filter_var with FILTER_VALIDATE_URL
     // If URL is invalid, return error response with 400 status
-    $title = trim($data['title']);
-    $description = trim($data['description'] ?? '');
-    $link = trim($data['link']);
+    $title = sanitizeInput($data['title']);
+    $description = sanitizeInput($data['description'] ?? '');
+    $link = sanitizeInput($data['link']);
     if (!filter_var($link, FILTER_VALIDATE_URL)) {
         sendResponse(array('success' => false, 'message' => 'Invalid URL format'), 400);
         return;
@@ -262,14 +262,14 @@ function createResource($db, $data) {
     
     // TODO: Prepare INSERT query
     // INSERT INTO resources (title, description, link) VALUES (?, ?, ?)
-    $sql = "INSERT INTO resources (title, description, link) VALUES (:title, :description, :link)";
+    $sql = "INSERT INTO resources (title, description, link) VALUES (?, ?, ?)";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind parameters
     // Bind title, description, and link
-    $stmt->bindValue(':title', $title);
-    $stmt->bindValue(':description', $description);
-    $stmt->bindValue(':link', $link);
+    $stmt->bindValue(1, $title);
+    $stmt->bindValue(2, $description);
+    $stmt->bindValue(3, $link);
     
     // TODO: Execute the query
     $stmt->execute();
@@ -317,9 +317,9 @@ function updateResource($db, $data) {
     // Prepare and execute a SELECT query to find the resource by id
     // If not found, return error response with 404 status
     $resourceId = $data['id'];
-    $checkSql = "SELECT id FROM resources WHERE id = :id";
+    $checkSql = "SELECT id FROM resources WHERE id = ?";
     $checkStmt = $db->prepare($checkSql);
-    $checkStmt->bindValue(':id', $resourceId);
+    $checkStmt->bindValue(1, $resourceId);
     $checkStmt->execute();
 
     if (!$checkStmt->fetch()) {
@@ -367,7 +367,7 @@ function updateResource($db, $data) {
     
     // TODO: Build the complete UPDATE SQL query
     // UPDATE resources SET field1 = ?, field2 = ? WHERE id = ?
-    $sql = "UPDATE resources SET " . implode(",", $setClauses) . " WHERE id = :id";
+    $sql = "UPDATE resources SET " . implode(",", $setClauses) . " WHERE id = ?";
     
     // TODO: Prepare the query
     $stmt = $db-> prepare($sql);
@@ -416,9 +416,9 @@ function deleteResource($db, $resourceId) {
     // TODO: Check if resource exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $checkSql = "SELECT id FROM resources WHERE id = :id";
+    $checkSql = "SELECT id FROM resources WHERE id = ?";
     $checkStmt = $db->prepare($checkSql);
-    $checkStmt->bindValue(':id', $resourceId);
+    $checkStmt->bindValue(1, $resourceId);
     $checkStmt->execute();
 
     if (!$checkStmt->fetch()){
@@ -434,21 +434,21 @@ function deleteResource($db, $resourceId) {
         // TODO: First, delete all associated comments
         // Prepare DELETE query for comments table
         // DELETE FROM comments WHERE resource_id = ?
-        $deleteCommentsSql = "DELETE FROM comments WHERE resource_id = :resource_id";
+        $deleteCommentsSql = "DELETE FROM comments WHERE resource_id = ?";
         $deleteCommentsStmt = $db->prepare($deleteCommentsSql);
 
         // TODO: Bind resource_id and execute
-        $deleteCommentsStmt->bindValue(':resource_id', $resourceId);
+        $deleteCommentsStmt->bindValue(1, $resourceId);
         $deleteCommentsStmt->execute();
         
         // TODO: Then, delete the resource
         // Prepare DELETE query for resources table
         // DELETE FROM resources WHERE id = ?
-        $deleteResourceSql = "DELETE FROM resources WHERE id = :id";
+        $deleteResourceSql = "DELETE FROM resources WHERE id = ?";
         $deleteResourceStmt = $db->prepare($deleteResourceSql);
         
         // TODO: Bind resource_id and execute
-        $deleteResourceStmt->bindValue(':id', $resourceId, PDO::PARAM_INT);
+        $deleteResourceStmt->bindValue(1, $resourceId, PDO::PARAM_INT);
         $deleteResourceStmt->execute();
         
         // TODO: Commit the transaction
@@ -498,13 +498,13 @@ function getCommentsByResourceId($db, $resourceId) {
     // WHERE resource_id = ? 
     // ORDER BY created_at ASC
     $sql = "SELECT id, resource_id, author, text, created_at
-            FROM comments
-            WHERE resource_id = :resource_id
+            FROM comments_resource
+            WHERE resource_id = ?
             ORDER BY created_at ASC";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind the resource_id parameter
-    $stmt->bindValue(':resource_id', $resourceId);
+    $stmt->bindValue(1, $resourceId);
     
     // TODO: Execute the query
     $stmt->execute();
@@ -569,14 +569,14 @@ function createComment($db, $data) {
     
     // TODO: Prepare INSERT query
     // INSERT INTO comments (resource_id, author, text) VALUES (?, ?, ?)
-    $sql = "INSERT INTO comments_resource (resource_id, author, text) VALUES (:resource_id, :author, :text)";
+    $sql = "INSERT INTO comments_resource (resource_id, author, text) VALUES (?, ?, ?)";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind parameters
     // Bind resource_id, author, and text
-    $stmt->bindValue(':resource_id', $resourceId);
-    $stmt->bindValue(':author', $author);
-    $stmt->bindValue(':text', $text)
+    $stmt->bindValue(1, $resourceId);
+    $stmt->bindValue(2, $author);
+    $stmt->bindValue(3, $text);
     
     // TODO: Execute the query
     $stmt->execute();
@@ -620,9 +620,9 @@ function deleteComment($db, $commentId) {
     // TODO: Check if comment exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $checkSql = " SELECT id FROM comments_resource WHERE id = :comment_id";
+    $checkSql = " SELECT id FROM comments_resource WHERE id = ?";
     $checkStmt = $db->prepare($checkSql);
-    $checkStmt->bindValue(':comment_id', $commentId, PDO::PARAM_INT);
+    $checkStmt->bindValue(1, $commentId, PDO::PARAM_INT);
     $checkStmt->execute();
 
     if (!$checkStmt->fetch()) {
@@ -632,11 +632,11 @@ function deleteComment($db, $commentId) {
     
     // TODO: Prepare DELETE query
     // DELETE FROM comments WHERE id = ?
-    $sql = "DELETE FROM comments_resource WHERE id = :comment_id";
+    $sql = "DELETE FROM comments_resource WHERE id = ?";
     $stmt = $db->prepare($sql);
     
     // TODO: Bind the comment_id parameter
-    $stmt->bindValue(':comment_id', $commentId, PDO::PARAM_INT);
+    $stmt->bindValue(1, $commentId, PDO::PARAM_INT);
     
     // TODO: Execute the query
      $stmt->execute();
@@ -668,7 +668,7 @@ try {
         // Call getCommentsByResourceId()
         if ($action === 'comments') {
             if($resourceId != null) {
-                getCommentsByResourceId($db, $resourceId);
+                getCommentsByResourceId($db, $_GET['resource_id']);
             } else {
                 sendResponse(array('success' => false, 'message' => 'resource_id parameter is required'), 400);
             }
@@ -775,7 +775,7 @@ function sendResponse($data, $statusCode = 200) {
     // TODO: Ensure data is an array
     // If not, wrap it in an array
     if (!is_array($data)) {
-        $data = array('data' => $data);
+        $data = array($data);
     }
     
     // TODO: Echo JSON encoded data
@@ -815,7 +815,7 @@ function sanitizeInput($data) {
     
     // TODO: Convert special characters using htmlspecialchars()
     // Use ENT_QUOTES to escape both double and single quotes
-    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+    $data = htmlspecialchars($data, ENT_QUOTES);
     
     // TODO: Return sanitized data
     return $data;
@@ -837,7 +837,7 @@ function validateRequiredFields($data, $requiredFields) {
     // Check if each field exists in data and is not empty
     // If missing or empty, add to missing fields array
     foreach ($requiredFields as $field) {
-        if (!isset($data[$field]) || empty($data[$field])) {
+        if (!isset($data[$field]) || trim($data[$field]) === '') {
             $missing[] = $field;
         }
     }
