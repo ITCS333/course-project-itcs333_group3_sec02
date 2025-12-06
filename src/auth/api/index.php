@@ -46,9 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // The Fetch API sends JSON data in the request body
 // Use file_get_contents with 'php://input' to read the raw request body
 $rawBody = file_get_contents('php://input');
+
 // TODO: Decode the JSON data into a PHP associative array
 // Use json_decode with the second parameter set to true
 $data = json_decode($rawBody, true);
+
 // TODO: Extract the email and password from the decoded data
 // Check if both 'email' and 'password' keys exist in the array
 // If either is missing, return an error response and exit
@@ -115,39 +117,61 @@ try {
     // --- Prepare SQL Query ---
     // TODO: Write a SQL SELECT query to find the user by email
     // Select the following columns: id, name, email, password
-    // IMPORTANT: Also fetch is_admin (because schema requires it)
+    // Use a WHERE clause to filter by email
+    // IMPORTANT: Use a placeholder (? or :email) for the email value
+    // This prevents SQL injection attacks
     $sql = "SELECT id, name, email, password, is_admin FROM users WHERE email = :email LIMIT 1";
 
     // --- Prepare the Statement ---
+    // TODO: Prepare the SQL statement using the PDO prepare method
+    // Store the result in a variable
+    // Prepared statements protect against SQL injection
     $stmt = $pdo->prepare($sql);
 
     // --- Execute the Query ---
-    // TODO: Execute with placeholder binding
+    // TODO: Execute the prepared statement with the email parameter
+    // Bind the email value to the placeholder
     $stmt->bindParam(':email', $email, PDO::PARAM_STR);
     $stmt->execute();
 
     // --- Fetch User Data ---
     // TODO: Fetch the user record from the database
+    // Use the fetch method with PDO::FETCH_ASSOC
+    // This returns an associative array of the user data, or false if no user found
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // --- Verify User Exists and Password Matches ---
     // TODO: Check if a user was found
+    // The fetch method returns false if no record matches
     if ($user && isset($user['password'])) {
-
-        // TODO: Verify password using password_verify()
+        // TODO: If user exists, verify the password
+        // Use password_verify() to compare the submitted password with the hashed password from database
+        // This function returns true if they match, false otherwise
+        //
+        // NOTE: This assumes passwords are stored as hashes using password_hash()
+        // Never store passwords in plain text!
         $passwordMatches = password_verify($password, $user['password']);
 
         // --- Handle Successful Authentication ---
+        // TODO: If password verification succeeds:
         if ($passwordMatches) {
-
-            // TODO: Store user info in session
+            // TODO: Store user information in session variables
+            // Store: user_id, user_name, user_email, logged_in
+            // DO NOT store the password in the session!
             $_SESSION['user_id']    = $user['id'];
             $_SESSION['user_name']  = $user['name'];
             $_SESSION['user_email'] = $user['email'];
-            $_SESSION['is_admin']   = $user['is_admin']; // ⭐ ADDED
             $_SESSION['logged_in']  = true;
+            // (extra but useful) store admin flag too
+            $_SESSION['is_admin']   = (int)$user['is_admin'];
 
-            // TODO: Prepare a success response
+            // TODO: Prepare a success response array
+            // Include:
+            // - 'success' => true
+            // - 'message' => 'Login successful'
+            // - 'user' => array with safe user details (id, name, email)
+            //
+            // IMPORTANT: Do NOT include the password in the response
             $response = [
                 'success' => true,
                 'message' => 'Login successful',
@@ -155,40 +179,52 @@ try {
                     'id'       => $user['id'],
                     'name'     => $user['name'],
                     'email'    => $user['email'],
-                    'is_admin' => $user['is_admin'] // ⭐ ADDED
+                    'is_admin' => (int)$user['is_admin'] // optional but handy for frontend
                 ]
             ];
 
-            // TODO: Return JSON response
+            // TODO: Encode the response array as JSON and echo it
             echo json_encode($response);
+            // TODO: Exit the script to prevent further execution
             exit;
         }
     }
 
     // --- Handle Failed Authentication ---
+    // TODO: If user doesn't exist OR password verification fails:
+    // TODO: Prepare an error response array
+    // Include:
+    // - 'success' => false
+    // - 'message' => 'Invalid email or password'
+    //
+    // SECURITY NOTE: Don't specify whether email or password was wrong
+    // This prevents attackers from enumerating valid email addresses
     $errorResponse = [
         'success' => false,
         'message' => 'Invalid email or password'
     ];
 
-    // TODO: Return failure JSON
+    // TODO: Encode the error response as JSON and echo it
     echo json_encode($errorResponse);
+    // TODO: Exit the script
     exit;
-
-}
-// TODO: Catch PDO exceptions in the catch block
+} 
+    // TODO: Catch PDO exceptions in the catch block
+    // Catch PDOException type
 catch (PDOException $e) {
-
-    // TODO: Log error for debugging
+    // TODO: Log the error for debugging
+    // Use error_log() to write the error message to the server error log
     error_log('Database error in index.php: ' . $e->getMessage());
 
-    // TODO: Return a generic error message
+    // TODO: Return a generic error message to the client
+    // DON'T expose database details to the user for security reasons
+    // Return a JSON response with success false and a generic message
     echo json_encode([
         'success' => false,
         'message' => 'An error occurred while processing your request.'
     ]);
+    // TODO: Exit the script
     exit;
 }
-
 // --- End of Script ---
 ?>
