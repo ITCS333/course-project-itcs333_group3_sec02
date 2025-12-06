@@ -6,14 +6,18 @@
  * It uses PDO to interact with a MySQL database.
  * 
  * Database Table Structure (for reference):
- * Table: students
+ * Table: users   <-- from schema
  * Columns:
  *   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
- *   - student_id (VARCHAR(50), UNIQUE) - The student's university ID
  *   - name (VARCHAR(100))
  *   - email (VARCHAR(100), UNIQUE)
  *   - password (VARCHAR(255)) - Hashed password
+ *   - is_admin (TINYINT(1)) - 1 for admin, 0 for normal student
  *   - created_at (TIMESTAMP)
+ * 
+ * NOTE: There is no separate `student_id` column in the schema.
+ *       In this API we treat `student_id` as the part before '@' in the email,
+ *       e.g. '202101234' from '202101234@stu.uob.edu.bh'.
  * 
  * HTTP Methods Supported:
  *   - GET: Retrieve student(s)
@@ -93,13 +97,33 @@ function getStudents($db) {
         ? "DESC"
         : "ASC";
 
+    // Map sort field to actual column / expression
+    // `student_id` is derived from email prefix: SUBSTRING_INDEX(email, '@', 1)
+    if ($sort === "student_id") {
+        $orderBy = "student_id";
+    } elseif ($sort === "email") {
+        $orderBy = "email";
+    } else {
+        $orderBy = "name";
+    }
+
     // TODO: Prepare the SQL query using PDO
     // Note: Do NOT select the password field
-    $sql = "SELECT student_id, name, email, created_at FROM students";
+    // Using `users` table (from schema) and deriving student_id from email
+    $sql = "
+        SELECT 
+            SUBSTRING_INDEX(email, '@', 1) AS student_id,
+            name,
+            email,
+            created_at
+        FROM users
+    ";
     if ($search) {
-        $sql .= " WHERE name LIKE :search OR student_id LIKE :search OR email LIKE :search";
+        $sql .= " WHERE name LIKE :search 
+                  OR SUBSTRING_INDEX(email, '@', 1) LIKE :search 
+                  OR email LIKE :search";
     }
-    $sql .= " ORDER BY $sort $order";
+    $sql .= " ORDER BY $orderBy $order";
 
     $stmt = $db->prepare($sql);
 
@@ -128,10 +152,17 @@ function getStudents($db) {
  */
 function getStudentById($db, $studentId) {
     // TODO: Prepare SQL query to select student by student_id
-    $sql = "SELECT student_id, name, email, created_at 
-            FROM students 
-            WHERE student_id = :student_id 
-            LIMIT 1";
+    // Here student_id is derived from email prefix
+    $sql = "
+        SELECT 
+            SUBSTRING_INDEX(email, '@', 1) AS student_id,
+            name,
+            email,
+            created_at 
+        FROM users 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :student_id 
+        LIMIT 1
+    ";
 
     // TODO: Bind the student_id parameter
     $stmt = $db->prepare($sql);
@@ -187,7 +218,15 @@ function createStudent($db, $data) {
     // TODO: Check if student_id or email already exists
     // Prepare and execute a SELECT query to check for duplicates
     // If duplicate found, return error response with 409 status (Conflict)
-    $check = $db->prepare("SELECT id FROM students WHERE student_id = :sid OR email = :email LIMIT 1");
+    // Here we check both:
+    //  - email exact match
+    //  - student_id match via SUBSTRING_INDEX(email, '@', 1)
+    $check = $db->prepare("
+        SELECT id FROM users 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :sid 
+           OR email = :email 
+        LIMIT 1
+    ");
     $check->bindParam(":sid", $student_id, PDO::PARAM_STR);
     $check->bindParam(":email", $email, PDO::PARAM_STR);
     $check->execute();
@@ -201,13 +240,14 @@ function createStudent($db, $data) {
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
     // TODO: Prepare INSERT query
-    $sql = "INSERT INTO students (student_id, name, email, password, created_at)
-            VALUES (:sid, :name, :email, :password, NOW())";
+    // Using `users` table (schema) and setting is_admin = 0 for students
+    $sql = "INSERT INTO users (name, email, password, is_admin)
+            VALUES (:name, :email, :password, 0)";
     $stmt = $db->prepare($sql);
 
     // TODO: Bind parameters
     // Bind student_id, name, email, and hashed password
-    $stmt->bindParam(":sid", $student_id, PDO::PARAM_STR);
+    // Note: student_id is not stored in a separate column; it's derived from email.
     $stmt->bindParam(":name", $name, PDO::PARAM_STR);
     $stmt->bindParam(":email", $email, PDO::PARAM_STR);
     $stmt->bindParam(":password", $hashedPassword, PDO::PARAM_STR);
@@ -243,7 +283,11 @@ function updateStudent($db, $data) {
     // TODO: Check if student exists
     // Prepare and execute a SELECT query to find the student
     // If not found, return error response with 404 status
-    $check = $db->prepare("SELECT id FROM students WHERE student_id = :sid LIMIT 1");
+    $check = $db->prepare("
+        SELECT id FROM users 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :sid 
+        LIMIT 1
+    ");
     $check->bindParam(":sid", $sid, PDO::PARAM_STR);
     $check->execute();
 
@@ -272,7 +316,11 @@ function updateStudent($db, $data) {
         // Prepare and execute a SELECT query
         // Exclude the current student from the check
         // If duplicate found, return error response with 409 status
-        $dup = $db->prepare("SELECT id FROM students WHERE email = :email AND student_id != :sid");
+        $dup = $db->prepare("
+            SELECT id FROM users 
+            WHERE email = :email 
+              AND SUBSTRING_INDEX(email, '@', 1) != :sid
+        ");
         $dup->bindParam(":email", $email, PDO::PARAM_STR);
         $dup->bindParam(":sid", $sid, PDO::PARAM_STR);
         $dup->execute();
@@ -289,7 +337,8 @@ function updateStudent($db, $data) {
         sendResponse(["success" => false, "message" => "No fields to update"], 400);
     }
 
-    $sql = "UPDATE students SET ".implode(", ", $fields)." WHERE student_id = :sid";
+    $sql = "UPDATE users SET ".implode(", ", $fields)." 
+            WHERE SUBSTRING_INDEX(email, '@', 1) = :sid";
     $stmt = $db->prepare($sql);
 
     // TODO: Bind parameters dynamically
@@ -327,7 +376,11 @@ function deleteStudent($db, $studentId) {
     // TODO: Check if student exists
     // Prepare and execute a SELECT query
     // If not found, return error response with 404 status
-    $check = $db->prepare("SELECT id FROM students WHERE student_id = :sid LIMIT 1");
+    $check = $db->prepare("
+        SELECT id FROM users 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :sid 
+        LIMIT 1
+    ");
     $check->bindParam(":sid", $sid, PDO::PARAM_STR);
     $check->execute();
 
@@ -336,7 +389,7 @@ function deleteStudent($db, $studentId) {
     }
 
     // TODO: Prepare DELETE query
-    $sql = "DELETE FROM students WHERE student_id = :sid";
+    $sql = "DELETE FROM users WHERE SUBSTRING_INDEX(email, '@', 1) = :sid";
     $stmt = $db->prepare($sql);
 
     // TODO: Bind the student_id parameter
@@ -402,7 +455,11 @@ function changePassword($db, $data) {
 
     // TODO: Retrieve current password hash from database
     // Prepare and execute SELECT query to get password
-    $sql = "SELECT password FROM students WHERE student_id = :student_id LIMIT 1";
+    $sql = "
+        SELECT password FROM users 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :student_id 
+        LIMIT 1
+    ";
     $stmt = $db->prepare($sql);
     $stmt->bindParam(':student_id', $student_id, PDO::PARAM_STR);
     $stmt->execute();
@@ -433,7 +490,11 @@ function changePassword($db, $data) {
 
     // TODO: Update password in database
     // Prepare UPDATE query
-    $updateSql = "UPDATE students SET password = :password WHERE student_id = :student_id";
+    $updateSql = "
+        UPDATE users 
+        SET password = :password 
+        WHERE SUBSTRING_INDEX(email, '@', 1) = :student_id
+    ";
     $updateStmt = $db->prepare($updateSql);
 
     // TODO: Bind parameters and execute
@@ -584,9 +645,3 @@ function sanitizeInput($data) {
 }
 
 ?>
----
-
-If you want, next step I can:
-
-- Help you add the small `CREATE TABLE students` fragment into your schema file exactly in the right place.
-- Or help you test some example requests (e.g. `GET /admin/students.php?student_id=202101234`) so you feel confident it all fits together.
