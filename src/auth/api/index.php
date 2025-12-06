@@ -83,6 +83,22 @@ if (strlen($password) < 8) {
 // TODO: Get the database connection using the provided function
 // Assume getDBConnection() returns a PDO instance with error mode set to exception
 // The function is defined elsewhere (e.g., in a config file or db.php)
+function getDBConnection() {
+    $host = 'localhost';
+    $db   = 'course';
+    $user = 'admin';
+    $pass = 'password123';
+    $dsn  = "mysql:host=$host;dbname=$db;charset=utf8mb4";
+
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    return new PDO($dsn, $user, $pass, $options);
+}
+
 $pdo = getDBConnection();
 // TODO: Wrap database operations in a try-catch block to handle PDO exceptions
 // This ensures you can return a proper JSON error response if something goes wrong
@@ -93,7 +109,7 @@ try {
     // Use a WHERE clause to filter by email
     // IMPORTANT: Use a placeholder (? or :email) for the email value
     // This prevents SQL injection attacks
-    $sql = "SELECT id, name, email, password FROM users WHERE email = :email LIMIT 1";
+    $sql = "SELECT id, name, email, password, is_admin FROM users WHERE email = :email LIMIT 1";
     // --- Prepare the Statement ---
     // TODO: Prepare the SQL statement using the PDO prepare method
     // Store the result in a variable
