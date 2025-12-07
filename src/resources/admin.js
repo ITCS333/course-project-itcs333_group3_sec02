@@ -21,6 +21,7 @@ const resourceForm = document.querySelector('#resource-form');
 
 // TODO: Select the resources table body ('#resources-tbody').
 const resourcesTableBody = document.querySelector('#resources-tbody');
+const Resource_URL = './api/index.php?resource=resources';
 
 // --- Functions ---
 
@@ -48,13 +49,13 @@ function createResourceRow(resource) {
 
   const editBtn = document.createElement('button');
   editBtn.textContent ='Edit';
-  editBtn.className = 'edit-btn';
-  editBtn.setAttribute('data-id', resource.id);
+  editBtn.classList.add('edit-btn');
+  editBtn.dataset.id = resource.id;
 
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = 'Delete';
-  deleteBtn.className = 'delete-btn';
-  deleteBtn.setAttribute('data-id', resource.id);
+  deleteBtn.classList.add('delete-btn');
+  deleteBtn.dataset.id = resource.id;
 
   //buttons appended to actions cell
   actionsCell.appendChild(editBtn);
@@ -79,7 +80,7 @@ function createResourceRow(resource) {
  */
 function renderTable() {
   // ... your implementation here ...
-  resourcesTableBody.innerHTML = '';
+  resourcesTableBody.innerHTML = "";
 
   for (let i=0; i<resources.length; i++){
     const row = createResourceRow(resources[i]);
@@ -108,9 +109,9 @@ function handleAddResource(event) {
 
   const newResource ={
     id: `res_${Date.now()}`,
-    title: titleInput,// add .value
-    description: descriptionInput, // add .value
-    link: linkInput // add .value
+    title: titleInput.value,
+    description: descriptionInput.value, 
+    link: linkInput.value
   };
   resources.push(newResource);
   renderTable();
@@ -131,10 +132,7 @@ function handleTableClick(event) {
   // ... your implementation here ...
   if (event.target.classList.contains('delete-btn')){
     const resourceId = event.target.getAttribute('data-id');
-    resources = resources.filter(function(resource){
-      return resource.id !== resourceId;
-    });
-
+    resources = resources.filter(resource => resource.id !== resourceId);
     renderTable();
   }
 }
@@ -151,10 +149,10 @@ function handleTableClick(event) {
  */
 async function loadAndInitialize() {
   // ... your implementation here ...
-  const response = await fetch('resources.json'); // replace with : const response = await fetch('../../api/resources.json');
-  const data = await response.json();
+  const response = await fetch(Resource_URL); 
+  const res = await response.json();
 
-  resources =data;
+  resources = res.data || [];
   renderTable();
 
   resourceForm.addEventListener('submit', handleAddResource);
