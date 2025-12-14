@@ -111,11 +111,13 @@ function handleLogin(event) {
   // If valid locally, send to backend
   displayMessage("Processing login...", "success");
 
-  fetch("login.php", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  })
+if (typeof fetch === "undefined") return;
+
+fetch("login.php", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, password })
+})
     .then(response => response.json())
     .then(data => {
       if (data.success) {
